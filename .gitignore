@@ -22,3 +22,6 @@ go.work
 
 # config file with client secrets
 ffs_config.yaml
+
+# database
+*.db
