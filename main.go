@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -42,7 +43,7 @@ const (
 var (
 	mux                = http.NewServeMux()
 	server             = &http.Server{Addr: ":8080", Handler: mux}
-	indexHtml          = template.Must(template.ParseFiles("index.html"))
+	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.html"))
 	selectPlaylistHtml = template.Must(template.ParseFiles("select_playlist.html"))
 
 	spClient *spotify.Client
@@ -62,8 +63,11 @@ func main() {
 
 	mux.HandleFunc("/", defaultHandler)
 	mux.HandleFunc("/spotifyauthentication", authHandler)
-	mux.HandleFunc("/select_playlist", selectPlaylistHandler)
-	mux.HandleFunc("/select_song", selectSongHandler)
+	mux.HandleFunc("/api/select_playlist", selectPlaylistHandler)
+	mux.HandleFunc("/api/select_song/{selected}", selectSongHandler)
+	mux.HandleFunc("/select_song", selectSongPageHandler)
+	mux.HandleFunc("/winner/{winner}", winnerHandler)
+	mux.HandleFunc("/save", saveHandler)
 
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Server error: %s", err)
@@ -82,19 +86,7 @@ func defaultHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	song1, song2 := playlist.nextPair()
-
-	if song2 == nil {
-		indexHtml.Execute(w, map[string]string{
-			"Winner": song1.Track.Track.Name,
-		})
-		return
-	}
-
-	indexHtml.Execute(w, map[string]string{
-		"Song1": song1.Track.Track.Name,
-		"Song2": song2.Track.Track.Name,
-	})
+	http.NotFound(w, r)
 }
 
 func selectPlaylistHandler(w http.ResponseWriter, r *http.Request) {
@@ -104,39 +96,66 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Loading playlist")
 	var err error
 	if playlist, err = loadPlaylist(r.FormValue("playlist_url")); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Error loading playlist: %s\n", err)
 		return
 	}
-	log.Printf("Playlist loaded with %d items\n", len(playlist.Items))
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
 }
 
 func selectSongHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("got request %s %s\n", r.Method, r.URL)
-	selected, err := strconv.Atoi(r.FormValue("select_song"))
+	selected, err := strconv.Atoi(r.PathValue("selected"))
 	if err != nil {
 		http.Error(w, "Invalid selection", http.StatusBadRequest)
 		return
 	}
 
-	log.Println(selected)
 	playlist.selected(selected)
 
 	song1, song2 := playlist.nextPair()
-	song1_name, song2_name := song1.Track.Track.Name, song2.Track.Track.Name
+	song1_name, song2_name := song1.Title, song2.Title
 
 	if song2 == nil {
-		http.Error(w, "No more songs", http.StatusNotFound)
+		http.Redirect(w, r, "http://localhost:8080/winner/"+url.PathEscape(song1.Title), http.StatusTemporaryRedirect)
 		return
 	}
 	io.WriteString(w, fmt.Sprintf(`
-		<option value="1">%s</option>
-		<option value="2">%s</option>
+		<button hx-get="/api/select_song/1" hx-target="#form" hx-swap="innerHTML">%s</button>
+		<button hx-get="/api/select_song/2" hx-target="#form" hx-swap="innerHTML">%s</button>
 	`, song1_name, song2_name))
+}
+
+func selectSongPageHandler(w http.ResponseWriter, r *http.Request) {
+	song1, song2 := playlist.nextPair()
+
+	if song2 == nil {
+		http.Redirect(w, r, url.PathEscape(fmt.Sprintf("/winner/%s", song1.Title)), http.StatusTemporaryRedirect)
+		return
+	}
+
+	selectSongsHtml.Execute(w, map[string]string{
+		"Song1": song1.Title,
+		"Song2": song2.Title,
+	})
+}
+
+func winnerHandler(w http.ResponseWriter, r *http.Request) {
+	winner := r.PathValue("winner")
+
+	if err := playlist.save(); err != nil {
+		log.Printf("Error saving playlist: %s\n", err)
+	}
+	playlist = nil
+	io.WriteString(w, fmt.Sprintf("The winner is %s", winner))
+}
+
+func saveHandler(w http.ResponseWriter, r *http.Request) {
+	if err := playlist.save(); err != nil {
+		log.Printf("Error saving playlist: %s\n", err)
+		http.Error(w, fmt.Sprintf("Error saving playlist: %s\n", err), http.StatusInternalServerError)
+	}
 }
 
 func authHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,6 @@
 module github.com/bafto/FindFavouriteSong
 
-go 1.21.1
+go 1.22.1
 
 require (
 	github.com/spf13/viper v1.18.2

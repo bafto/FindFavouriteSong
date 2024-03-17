@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Find Favourite Song</title>
+	<script src="https://unpkg.com/htmx.org@1.9.11"
+		integrity="sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0"
+		crossorigin="anonymous"></script>
+</head>
+
+
+<body>
+	<h1>Select the song you like more</h1>
+	<div id="form">
+		<button hx-get="/api/select_song/1" hx-target="#form" hx-swap="innerHTML">{{ .Song1 }}</button>
+		<button hx-get="/api/select_song/2" hx-target="#form" hx-swap="innerHTML">{{ .Song2 }}</button>
+	</div>
+	<button hx-get="/save" hx-swap="none">Save</button>
+</body>
+
+</html>

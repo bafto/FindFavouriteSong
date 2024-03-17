@@ -25,3 +25,6 @@ ffs_config.yaml
 
 # database
 *.db
+
+# savefiles
+*.json
