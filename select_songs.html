@@ -12,8 +12,16 @@
 <body>
 	<h1>Select the song you like more</h1>
 	<div id="form">
-		<button hx-get="/api/select_song/1" hx-target="#form" hx-swap="innerHTML">{{ .Song1 }}</button>
-		<button hx-get="/api/select_song/2" hx-target="#form" hx-swap="innerHTML">{{ .Song2 }}</button>
+		<button hx-get="/api/select_song/1" hx-target="#form" hx-swap="innerHTML">
+			<img src="{{ .Song1_Image }}" />
+			<h3>{{ .Song1 }}</h3>
+			<h4>{{ .Song1_Artists }}</h4>
+		</button>
+		<button hx-get="/api/select_song/2" hx-target="#form" hx-swap="innerHTML">
+			<img src="{{ .Song2_Image }}" />
+			<h3>{{ .Song2 }}</h3>
+			<h4>{{ .Song2_Artists }}</h4>
+		</button>
 	</div>
 	<button hx-get="/save" hx-swap="none">Save</button>
 </body>

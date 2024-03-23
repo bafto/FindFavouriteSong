@@ -66,7 +66,7 @@ func main() {
 	mux.HandleFunc("/api/select_playlist", selectPlaylistHandler)
 	mux.HandleFunc("/api/select_song/{selected}", selectSongHandler)
 	mux.HandleFunc("/select_song", selectSongPageHandler)
-	mux.HandleFunc("/winner/{winner}", winnerHandler)
+	mux.HandleFunc("/winner", winnerHandler)
 	mux.HandleFunc("/save", saveHandler)
 
 	if err := server.ListenAndServe(); err != nil {
@@ -107,7 +107,7 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request) {
 
 func selectSongHandler(w http.ResponseWriter, r *http.Request) {
 	selected, err := strconv.Atoi(r.PathValue("selected"))
-	if err != nil {
+	if err != nil || selected < 1 || selected > 2 {
 		http.Error(w, "Invalid selection", http.StatusBadRequest)
 		return
 	}
@@ -118,37 +118,73 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request) {
 	song1_name, song2_name := song1.Title, song2.Title
 
 	if song2 == nil {
-		http.Redirect(w, r, "http://localhost:8080/winner/"+url.PathEscape(song1.Title), http.StatusTemporaryRedirect)
+		w.Header().Add("HX-Redirect", fmt.Sprintf("/winner"))
 		return
 	}
 	io.WriteString(w, fmt.Sprintf(`
-		<button hx-get="/api/select_song/1" hx-target="#form" hx-swap="innerHTML">%s</button>
-		<button hx-get="/api/select_song/2" hx-target="#form" hx-swap="innerHTML">%s</button>
-	`, song1_name, song2_name))
+		<button hx-get="/api/select_song/1" hx-target="#form" hx-swap="innerHTML">
+			<img src="%s" />
+			<h3>%s</h3>
+			<h4>%s</h4>
+		</button>
+		<button hx-get="/api/select_song/2" hx-target="#form" hx-swap="innerHTML">
+			<img src="%s" />
+			<h3>%s</h3>
+			<h4>%s</h4>
+		</button>
+	`, song1.Image, song1_name, song1.artistsString(), song2.Image, song2_name, song2.artistsString()))
 }
 
 func selectSongPageHandler(w http.ResponseWriter, r *http.Request) {
 	song1, song2 := playlist.nextPair()
 
 	if song2 == nil {
-		http.Redirect(w, r, url.PathEscape(fmt.Sprintf("/winner/%s", song1.Title)), http.StatusTemporaryRedirect)
+		w.Header().Add("HX-Redirect", fmt.Sprintf("/winner"))
+		http.Redirect(w, r, url.PathEscape(fmt.Sprintf("/winner", song1.Title)), http.StatusTemporaryRedirect)
 		return
 	}
 
 	selectSongsHtml.Execute(w, map[string]string{
-		"Song1": song1.Title,
-		"Song2": song2.Title,
+		"Song1":         song1.Title,
+		"Song1_Artists": song1.artistsString(),
+		"Song1_Image":   song1.Image,
+		"Song2":         song2.Title,
+		"Song2_Artists": song2.artistsString(),
+		"Song2_Image":   song2.Image,
 	})
 }
 
 func winnerHandler(w http.ResponseWriter, r *http.Request) {
-	winner := r.PathValue("winner")
+	winner := playlist.Winner
+	if winner == nil {
+		http.NotFound(w, r)
+		return
+	}
 
 	if err := playlist.save(); err != nil {
 		log.Printf("Error saving playlist: %s\n", err)
 	}
 	playlist = nil
-	io.WriteString(w, fmt.Sprintf("The winner is %s", winner))
+	fmt.Fprintf(w, `
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Find Favourite Song</title>
+</head>
+
+
+<body>
+	<h1>Winner</h1>
+	<div>
+		<img src="%s" />
+		<h3>%s</h3>
+		<h4>%s</h4>
+	</div>
+</body>
+
+</html>
+	`, winner.Image, winner.Title, winner.artistsString())
 }
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {

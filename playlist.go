@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/zmb3/spotify/v2"
 )
@@ -18,15 +19,27 @@ type Song struct {
 	Image   string   `json:"image"`
 }
 
+func (s *Song) artistsString() string {
+	return strings.Join(s.Artists, ", ")
+}
+
 func fromPlaylistItem(item spotify.PlaylistItem) *Song {
 	artists := make([]string, len(item.Track.Track.Artists))
 	for i, artist := range item.Track.Track.Artists {
 		artists[i] = artist.Name
 	}
+	img := ""
+	if len(item.Track.Track.Album.Images) > 0 {
+		img = item.Track.Track.Album.Images[0].URL
+	}
+	if len(item.Track.Track.Album.Images) > 1 {
+		img = item.Track.Track.Album.Images[1].URL
+	}
+
 	return &Song{
 		Title:   item.Track.Track.Name,
 		Artists: artists,
-		Image:   item.Track.Track.Album.Images[0].URL,
+		Image:   img,
 	}
 }
 
@@ -44,6 +57,7 @@ type Playlist struct {
 	Stages           []Stage `json:"stages"`
 	CurrentSelection []*Song `json:"currentSelection"`
 	NextSelection    []*Song `json:"nextSelection"`
+	Winner           *Song   `json:"winner"`
 }
 
 func (p *Playlist) nextPair() (*Song, *Song) {
@@ -63,7 +77,8 @@ func (p *Playlist) nextPair() (*Song, *Song) {
 	p.Stages = append(p.Stages, Stage{})
 
 	if len(p.CurrentSelection) == 1 {
-		return p.CurrentSelection[0], nil
+		p.Winner = p.CurrentSelection[0]
+		return p.Winner, nil
 	}
 	return p.nextPair()
 }
