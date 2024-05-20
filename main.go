@@ -2,224 +2,107 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"html/template"
-	"io"
-	"log"
-	"math/rand"
-	"net/http"
-	"net/url"
-	"strconv"
-	"time"
+	"database/sql"
+	"log/slog"
+	"os"
+	"path/filepath"
 
-	"github.com/spf13/viper"
-	"github.com/zmb3/spotify/v2"
-	spotifyauth "github.com/zmb3/spotify/v2/auth"
+	spotify "github.com/zmb3/spotify/v2"
+
+	_ "modernc.org/sqlite"
 )
-
-// init configuration
-func init() {
-	viper.SetConfigName("ffs_config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-
-	viper.AutomaticEnv()
-	viper.SetDefault("SPOTIFY_CLIENT_ID", "")
-	viper.SetDefault("SPOTIFY_CLIENT_SECRET", "")
-	viper.SetDefault("DB_PATH", "ffs.db")
-
-	err := viper.ReadInConfig()
-	if _, ok := err.(viper.ConfigFileNotFoundError); err != nil && !ok {
-		log.Fatalf("Error reading config file, %s", err)
-	}
-}
 
 const (
-	redirect_url = "http://localhost:8080/spotifyauthentication"
-	state_length = 8
-	timeout      = time.Second * 7
+	create_schema = `
+CREATE TABLE IF NOT EXISTS playlist (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NOT NULL
+)
+`
+	table_exists_query = `
+SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='playlist'
+`
+
+	test_insert = `
+INSERT INTO playlist (name) VALUES ('test'), ('test2'), ('test3')
+`
 )
 
-var (
-	mux                = http.NewServeMux()
-	server             = &http.Server{Addr: ":8080", Handler: mux}
-	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.html"))
-	selectPlaylistHtml = template.Must(template.ParseFiles("select_playlist.html"))
+func create_db(path string) (*sql.DB, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		err := os.MkdirAll(filepath.Dir(path), 0o755)
+		if err != nil {
+			return nil, err
+		}
 
-	spClient *spotify.Client
-	spAuth   *spotifyauth.Authenticator
-	authURL  string
-	state    = generateState(8)
-)
+		_, err = os.Create(path)
+		if err != nil {
+			return nil, err
+		}
+		slog.Println("Created database", "path", path)
+	} else if err != nil {
+		return nil, err
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, db.Ping()
+}
 
 func main() {
-	spAuth = spotifyauth.New(
-		spotifyauth.WithRedirectURL(redirect_url),
-		spotifyauth.WithScopes(spotifyauth.ScopePlaylistReadPrivate, spotifyauth.ScopeUserReadPrivate),
-		spotifyauth.WithClientSecret(viper.GetString("SPOTIFY_CLIENT_SECRET")),
-		spotifyauth.WithClientID(viper.GetString("SPOTIFY_CLIENT_ID")),
-	)
-	authURL = spAuth.AuthURL(state)
-
-	mux.HandleFunc("/", defaultHandler)
-	mux.HandleFunc("/spotifyauthentication", authHandler)
-	mux.HandleFunc("/api/select_playlist", selectPlaylistHandler)
-	mux.HandleFunc("/api/select_song/{selected}", selectSongHandler)
-	mux.HandleFunc("/select_song", selectSongPageHandler)
-	mux.HandleFunc("/winner", winnerHandler)
-	mux.HandleFunc("/save", saveHandler)
-
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Server error: %s", err)
-	}
-}
-
-func defaultHandler(w http.ResponseWriter, r *http.Request) {
-	if spClient == nil {
-		http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
-		log.Printf("Redirecting to %s\n", authURL)
-		return
-	}
-
-	if playlist == nil {
-		selectPlaylistHtml.Execute(w, nil)
-		return
-	}
-
-	http.NotFound(w, r)
-}
-
-func selectPlaylistHandler(w http.ResponseWriter, r *http.Request) {
-	if spClient == nil {
-		http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
-		log.Printf("Redirecting to %s\n", authURL)
-		return
-	}
-
-	var err error
-	if playlist, err = loadPlaylist(r.FormValue("playlist_url")); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Printf("Error loading playlist: %s\n", err)
-		return
-	}
-	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
-}
-
-func selectSongHandler(w http.ResponseWriter, r *http.Request) {
-	selected, err := strconv.Atoi(r.PathValue("selected"))
-	if err != nil || selected < 1 || selected > 2 {
-		http.Error(w, "Invalid selection", http.StatusBadRequest)
-		return
-	}
-
-	playlist.selected(selected)
-
-	song1, song2 := playlist.nextPair()
-	song1_name, song2_name := song1.Title, song2.Title
-
-	if song2 == nil {
-		w.Header().Add("HX-Redirect", fmt.Sprintf("/winner"))
-		return
-	}
-	io.WriteString(w, fmt.Sprintf(`
-		<button hx-get="/api/select_song/1" hx-target="#form" hx-swap="innerHTML">
-			<img src="%s" />
-			<h3>%s</h3>
-			<h4>%s</h4>
-		</button>
-		<button hx-get="/api/select_song/2" hx-target="#form" hx-swap="innerHTML">
-			<img src="%s" />
-			<h3>%s</h3>
-			<h4>%s</h4>
-		</button>
-	`, song1.Image, song1_name, song1.artistsString(), song2.Image, song2_name, song2.artistsString()))
-}
-
-func selectSongPageHandler(w http.ResponseWriter, r *http.Request) {
-	song1, song2 := playlist.nextPair()
-
-	if song2 == nil {
-		w.Header().Add("HX-Redirect", fmt.Sprintf("/winner"))
-		http.Redirect(w, r, url.PathEscape(fmt.Sprintf("/winner", song1.Title)), http.StatusTemporaryRedirect)
-		return
-	}
-
-	selectSongsHtml.Execute(w, map[string]string{
-		"Song1":         song1.Title,
-		"Song1_Artists": song1.artistsString(),
-		"Song1_Image":   song1.Image,
-		"Song2":         song2.Title,
-		"Song2_Artists": song2.artistsString(),
-		"Song2_Image":   song2.Image,
-	})
-}
-
-func winnerHandler(w http.ResponseWriter, r *http.Request) {
-	winner := playlist.Winner
-	if winner == nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	if err := playlist.save(); err != nil {
-		log.Printf("Error saving playlist: %s\n", err)
-	}
-	playlist = nil
-	fmt.Fprintf(w, `
-<!DOCTYPE html>
-<html>
-
-<head>
-	<title>Find Favourite Song</title>
-</head>
-
-
-<body>
-	<h1>Winner</h1>
-	<div>
-		<img src="%s" />
-		<h3>%s</h3>
-		<h4>%s</h4>
-	</div>
-</body>
-
-</html>
-	`, winner.Image, winner.Title, winner.artistsString())
-}
-
-func saveHandler(w http.ResponseWriter, r *http.Request) {
-	if err := playlist.save(); err != nil {
-		log.Printf("Error saving playlist: %s\n", err)
-		http.Error(w, fmt.Sprintf("Error saving playlist: %s\n", err), http.StatusInternalServerError)
-	}
-}
-
-func authHandler(w http.ResponseWriter, r *http.Request) {
-	if spClient != nil {
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-		return
-	}
-
-	tok, err := spAuth.Token(r.Context(), state, r)
+	db, err := create_db("fff.db")
 	if err != nil {
-		http.Error(w, "Couldn't get token", http.StatusForbidden)
-		log.Printf("Couldn't get token: %s\n", err)
-		return
+		slog.Error("Error creating database", "error", err)
+		os.Exit(1)
 	}
-	if st := r.FormValue("state"); st != state {
-		http.NotFound(w, r)
-		log.Printf("State mismatch: %s != %s\n", st, state)
+	defer db.Close()
+	slog.Info("Connected to database")
+
+	table_count := 0
+	if err := db.QueryRow(table_exists_query).Scan(&table_count); err != nil {
+		slog.Error("Unable to get table count", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Got Table count", "table count", table_count)
+	if table_count > 0 {
+		result, err := db.Query("SELECT * FROM playlist")
+		if err != nil {
+		slog.Error("Unable to get table count", "error", err)
+		os.Exit(1)
+		}
+		defer result.Close()
+
+		for result.Next() {
+			var id int
+			var name string
+			if err := result.Scan(&id, &name); err != nil {
+				slog.Fatal(err)
+			}
+			slog.Printf("id: %d, name: %s\n", id, name)
+		}
 		return
 	}
 
-	spClient = spotify.New(spAuth.Client(context.Background(), tok), spotify.WithRetry(true))
-	log.Println("Login completed")
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	_, err = db.Exec(create_schema)
+	if err != nil {
+		slog.Fatal(err)
+		slog.Info
+	}
+	slog.Println("Created schema")
+
+	_, err = db.Exec(test_insert)
+	if err != nil {
+		slog.Fatal(err)
+	}
+	slog.Println("Inserted test data")
+
+	spClient := new(spotify.Client)
+	page, _ := spClient.GetPlaylistItems(context.TODO(), "23")
+	page.Items[0].Track.Track.
 }
 
-func generateState(length int) string {
-	gen := rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, length+2)
-	gen.Read(b)
-	return fmt.Sprintf("%x", b)[2 : length+2]
-}
+
