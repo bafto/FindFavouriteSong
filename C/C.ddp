@@ -1,0 +1,39 @@
+Wir definieren einen Zeiger oeffentlich als eine Zahl.
+
+Die oeffentliche Funktion Null gibt einen Zeiger zurück, macht:
+	Gib 0 als Zeiger zurück.
+Und kann so benutzt werden:
+	"NULL"
+
+Die oeffentliche Funktion DDP_Memcpy mit den Parametern dest, src und n vom Typ Zeiger, Zeiger und Zahl, gibt nichts zurück,
+ist in "C.ddp.c" definiert
+und kann so benutzt werden:
+	"Kopiere <n> Bytes von <src> nach <dest>" oder
+	"kopiere <n> Bytes von <src> nach <dest>"
+
+Wir definieren einen C_String oeffentlich als einen Zeiger.
+
+Die oeffentliche Funktion Text_Zu_C_String mit dem Parameter t vom Typ Text Referenz, gibt einen C_String zurück,
+ist in "C.ddp.c" definiert
+Und kann so benutzt werden:
+	"<t> interpretiert als C_String"
+
+Die oeffentliche Funktion Text_Zu_Zeiger mit dem Parameter t vom Typ Text Referenz, gibt einen Zeiger zurück,
+ist in "C.ddp.c" definiert
+Und kann so benutzt werden:
+	"<t> interpretiert als Zeiger"
+
+Die oeffentliche Funktion Text_Byte_Groesse mit dem Parameter t vom Typ Text Referenz, gibt eine Zahl zurück,
+ist in "C.ddp.c" definiert
+Und kann so benutzt werden:
+	"die Byte Groesse von <t>"
+
+Die oeffentliche Funktion Buchstabe_Byte_Groesse mit dem Parameter b vom Typ Buchstabe, gibt eine Zahl zurück,
+ist in "C.ddp.c" definiert
+Und kann so benutzt werden:
+	"die Byte Groesse von <b>"
+
+Die oeffentliche Funktion Erstelle_Puffer mit dem Parameter n vom Typ Zahl, gibt einen Text zurück,
+ist in "C.ddp.c" definiert
+Und kann so benutzt werden:
+	"ein neuer Puffer der Länge <n>"

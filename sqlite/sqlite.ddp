@@ -1,0 +1,69 @@
+Binde "Duden/Ausgabe" ein.
+Binde "Duden/Laufzeit" ein.
+
+Binde "../C/C" ein.
+
+Wir definieren eine Datenbank als einen Zeiger.
+Wir definieren einen SQLAusdruck als einen Zeiger.
+
+Die Funktion Neue_Datenbank gibt eine Datenbank zurück, macht:
+	Gib NULL als Datenbank zurück.
+Und kann so benutzt werden:
+	"eine neue Datenbank"
+
+Die Funktion Neuer_SQLAusdruck gibt einen SQLAusdruck zurück, macht:
+	Gib NULL als SQLAusdruck zurück.
+Und kann so benutzt werden:
+	"ein neuer SQLAusdruck"
+
+Die Funktion Oeffne_DB mit den Parametern db und db_name vom Typ Datenbank Referenz und Text, gibt einen Wahrheitswert zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Oeffne <db> als <db_name>" oder
+	"<db> erfolgreich als <db_name> geoeffnet wurde"
+
+Die Funktion Schließe_DB mit dem Parameter db vom Typ Datenbank, gibt nichts zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Schließe <db>"
+
+Die Funktion Statement_Vorbereiten mit den Parametern db, stmt und sql vom Typ Datenbank, SQLAusdruck Referenz und Text, gibt einen Wahrheitswert zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Bereite <stmt> in <db> mit dem SQL <sql> vor" oder
+	"<stmt> erfolgreich in <db> mit dem SQL <sql> vorbereitet wurde"
+
+Die Funktion Statement_Schließen mit dem Parameter stmt vom Typ SQLAusdruck, gibt nichts zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Schließe <stmt>"
+
+Die Funktion Naechste_Zeile_Vorbereiten mit dem Parameter stmt vom Typ SQLAusdruck, gibt einen Wahrheitswert zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Bereite die nächste Zeile in <stmt> vor" oder
+	"die nächste Zeile in <stmt> vorbereitet wurde"
+
+Die Funktion Lies_Text mit dem Parameter stmt vom Typ SQLAusdruck, gibt einen Text zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"der nächste Text aus <stmt>"
+
+
+Die Datenbank db ist eine neue Datenbank.
+
+Wenn db erfolgreich als "test.db" geoeffnet wurde, Schreibe "DB ist offen" auf eine Zeile.
+Sonst beende das Programm mit Code 1.
+
+Der SQLAusdruck stmt ist ein neuer SQLAusdruck.
+
+Wenn nicht stmt erfolgreich in db mit dem SQL "SELECT name FROM people" vorbereitet wurde, dann:
+	Schließe db.
+	Beende das Programm mit Code 2.
+
+Solange die nächste Zeile in stmt vorbereitet wurde, mache:
+	Der Text t ist der nächste Text aus stmt.
+	Schreibe t auf eine Zeile.
+
+Schließe stmt.
+Schließe db.
