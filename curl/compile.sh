@@ -1,0 +1,2 @@
+#!/bin/bash
+kddp kompiliere Curl.ddp --externe-gcc-optionen="-I../libcurl/include" --gcc-optionen="-static -L../libcurl/lib -lcurl -lnghttp2 -lnghttp3 -lssl -lssh2 -lcrypto -lcrypt32 -lbcrypt -lz -ldl -lpsl -lws2_32 -lbrotlidec -lbrotlicommon -lngtcp2_crypto_quictls -lngtcp2 -lzstd -lwldap32"

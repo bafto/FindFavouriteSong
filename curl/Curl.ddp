@@ -1,0 +1,220 @@
+Binde "../C/C" ein.
+Binde "Duden/Texte" ein.
+Binde "Duden/Fehlerbehandlung" ein.
+Binde "Duden/Ausgabe" ein.
+Binde "Duden/Laufzeit" ein.
+Binde "Duden/Listen" ein.
+
+Wir definieren einen C_Int als einen Buchstaben.
+Wir definieren einen CurlClient als einen Zeiger.
+
+Die Funktion curl_global_init mit dem Parameter flags vom Typ Zahl, gibt einen C_Int zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"das Ergebnis der curl Initialisierung mit den Optionen <flags>"
+
+Die Funktion curl_easy_init gibt einen CurlClient zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"ein neuer Curl Client"
+
+Die Funktion curl_easy_cleanup mit dem Parameter client vom Typ CurlClient, gibt nichts zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"Räume <client> auf"
+
+Die Funktion curl_easy_perform mit dem Parameter client vom Typ CurlClient, gibt einen C_Int zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"das Ergebnis der Anfrage von <client>"
+
+Die Funktion curl_easy_reset mit dem Parameter client vom Typ CurlClient, gibt nichts zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"Setze <client> zurück"
+
+Die Funktion curl_global_cleanup gibt nichts zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"Räume alles aus curl auf"
+
+Die Funktion Setzte_URL mit den Parametern client und url vom Typ CurlClient und Text, gibt nichts zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"Setzte die URL von <client> auf <url>"
+
+Die Funktion Setze_Curl_Zertifikat mit den Parametern client und cert vom Typ CurlClient und Text Referenz, gibt nichts zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"Setzte das Zertifikat von <client> auf <cert>"
+
+Die Funktion DDP_Write_Data mit den Parametern buffer, size, nmemb und userp vom Typ Zeiger, Zahl, Zahl und Text Referenz, gibt eine Zahl zurück, ist extern sichtbar, macht:
+	Die Zahl n ist size mal nmemb.
+	Der Text ddp_puffer ist ein neuer Puffer der Länge n.
+	Kopiere (size mal nmemb) Bytes von buffer nach (ddp_puffer interpretiert als C_String als Zeiger).
+	Füge ddp_puffer an userp an.
+	Gib size mal nmemb zurück.
+Und kann so benutzt werden:
+	"Schreibe <size> * <nmemb> Bytes von <buffer> in <userp>"
+
+Die Funktion Setzte_Curl_Koerper_Ziel mit den Parametern client und ziel vom Typ CurlClient und Text Referenz, gibt nichts zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"Setzte das Ziel für den Koerper von <client> auf <ziel>"
+
+Die Funktion Setze_Methode mit den Parametern client und methode vom Typ CurlClient und Text, gibt nichts zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"Setze die Methode von <client> auf <methode>"
+
+Wir definieren eine C_Kopfzeile als einen Zeiger.
+
+Die Funktion Setze_Kopfzeile mit den Parametern client und kopfzeile vom Typ CurlClient und Text Listen Referenz, gibt eine C_Kopfzeile zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"die C_Kopfzeile von <client> mit <kopfzeile>"
+
+Die Funktion Befreie_Kopfzeile mit dem Parameter kopfzeile vom Typ C_Kopfzeile, gibt nichts zurück,
+ist in "Curl.ddp.c" definiert
+Und kann so benutzt werden:
+	"Befreie <kopfzeile>"
+
+Die Funktion Curl_Fehler mit dem Parameter  code vom Typ C_Int, gibt einen Text zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"die Curl Fehlermeldung für <code>"
+
+Die Funktion Curl_Status mit dem Parameter client vom Typ CurlClient, gibt eine Zahl zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"der Letzten Status code von <client>",
+	"den Letzten Status code von <client>"
+
+Die Funktion Setze_POST_Daten mit den Parametern client und daten vom Typ CurlClient und Text Referenz, gibt nichts zurück,
+ist in "Curl.ddp.c" definiert
+und kann so benutzt werden:
+	"Setze die Daten von <client> auf <daten>"
+
+Wir nennen die Kombination aus
+	dem Text Schlüssel mit Standardwert "",
+	dem Text Wert mit Standardwert "",
+eine HttpHeader, und erstellen sie so:
+	"eine HttpHeader mit dem Schlüssel <Schlüssel> und dem Wert <Wert>" oder
+	"einer HttpHeader mit dem Schlüssel <Schlüssel> und dem Wert <Wert>"
+
+Die Funktion HttpHeader_Als_Text mit dem Parameter header vom Typ HttpHeader, gibt einen Text zurück, macht:
+	Wenn Wert von header gleich "" ist, dann:
+		Gib Schlüssel von header verkettet mit ':' zurück.
+	Gib Schlüssel von header verkettet mit ": " verkettet mit Wert von header zurück.
+Und überlädt den "als" Operator.
+
+Wir nennen eine HttpHeader Liste auch eine HttpKopfzeile.
+
+Die HttpKopfzeile StandardKopfzeile ist eine Liste, die aus
+	einer HttpHeader mit dem Schlüssel "Content-Type" und dem Wert "text/plain"
+besteht.
+
+Wir nennen die Kombination aus
+	dem Text Methode mit Standardwert "GET",
+	dem Text Url mit Standardwert "",
+	der HttpKopfzeile Kopfzeile mit Standardwert StandardKopfzeile,
+	dem Text Körper mit Standardwert "",
+eine HttpAnfrage,
+und erstellen sie so:
+	"eine HttpAnfrage an <Url>" oder
+	"eine GET Anfrage an <Url>" oder
+	"eine <Methode> Anfrage an <Url>" oder
+	"eine <Methode> Anfrage an <Url> mit dem Körper <Körper>" oder
+	"einer neuen HttpAnfrage" oder
+	"eine neue HttpAnfrage"
+
+Wir nennen die Kombination aus
+	der Zahl Status mit Standardwert -1,
+	dem Text Körper mit Standardwert "",
+	der HttpKopfzeile Kopfzeile mit Standardwert eine leere HttpHeader Liste,
+eine HttpAntwort, und erstellen sie so:
+	"eine neue HttpAntwort" oder
+	"eine HttpAntwort mit dem Status <Status> und dem Koerper <Körper>"
+
+Der C_Int init_status ist das Ergebnis der curl Initialisierung mit den Optionen 3.
+Der CurlClient client ist ein neuer Curl Client.
+
+Der Text curl_standard_zertifikat ist "curl-ca-bundle.crt".
+Die Funktion Sende_HttpAnfrage mit dem Parameter anfrage vom Typ HttpAnfrage, gibt eine HttpAntwort zurück, macht:
+	Setze client zurück.
+
+	Setzte die URL von client auf (Url von anfrage).
+	Wenn Methode von anfrage gleich "PUT" ist oder Methode von anfrage gleich "POST" ist oder Methode von anfrage gleich "PATCH" ist, dann:
+		Setze die Daten von client auf (Körper von anfrage).
+	Setze die Methode von client auf (Methode von anfrage).
+	Setzte das Zertifikat von client auf curl_standard_zertifikat.
+
+	Die HttpAntwort antwort ist eine neue HttpAntwort.
+	Setzte das Ziel für den Koerper von client auf (Körper von antwort).
+
+	Die Text Liste kopfzeile ist eine leere Text Liste.
+	Für jede HttpHeader header in Kopfzeile von anfrage, mache:
+		Füge (header als Text) an kopfzeile an.
+
+	Die C_Kopfzeile c_kopfzeile ist die C_Kopfzeile von client mit kopfzeile.
+
+	Der C_Int code ist das Ergebnis der Anfrage von client.
+	Wenn code als Buchstabe als Zahl ungleich 0 ist, dann:
+		Schreibe "error" auf eine Zeile.
+	 	Der Text curl_fehler ist die Curl Fehlermeldung für code.
+		Melde den Fehler curl_fehler.
+		Befreie c_kopfzeile.	
+		Gib antwort zurück.
+
+
+	Befreie c_kopfzeile.	
+	Speichere den Letzten Status code von client in Status von antwort.
+	[TODO: Response headers]
+	Gib antwort zurück.
+Und kann so benutzt werden:
+	"die Antwort auf die HttpAnfrage <anfrage>" oder
+	"die Antwort auf <anfrage>"
+
+Schreibe ab jetzt alle Fehler.
+Brich das Programm bei Fehlern ab.
+
+[ Die HttpAnfrage anfrage ist eine HttpAnfrage an "http://localhost:8080/".
+Die HttpAntwort antwort ist die Antwort auf anfrage.
+Schreibe ("Antwort status GET1: " verkettet mit (Status von antwort) als Text) auf eine Zeile.
+Schreibe ("Antwort-Koerper GET1: " verkettet mit Körper von antwort) auf eine Zeile.
+ 
+Speichere die Antwort auf 
+	(eine "POST" Anfrage an "http://localhost:8080/" mit dem Körper "Hallo aus DDP") 
+in antwort.
+Schreibe ("Antwort status POST: " verkettet mit (Status von antwort) als Text) auf eine Zeile.
+Schreibe ("Antwort-Koerper POST: " verkettet mit Körper von antwort) auf eine Zeile.
+
+Speichere die Antwort auf
+	(eine HttpAnfrage an "http://localhost:8080/")
+in antwort.
+Schreibe ("Antwort status GET2: " verkettet mit (Status von antwort) als Text) auf eine Zeile.
+Schreibe ("Antwort-Koerper GET2: " verkettet mit Körper von antwort) auf eine Zeile. ]
+
+Binde "../json/json" ein.
+Binde "../json/hash_tabelle" ein.
+
+Der Text tmlCountUrl ist "https://tmlapis.le0n.dev/1.3/count".
+
+Die HttpAntwort antwort ist die Antwort auf (eine HttpAnfrage an tmlCountUrl).
+Wenn Status von antwort ungleich 200 ist, dann:
+	Melde den Fehler ("Nicht OK: " verkettet mit (Status von antwort) als Text).
+
+Der JsonWert countAntwort ist der Json Wert in (Körper von antwort).
+Wenn countAntwort kein JsonObjekt ist, dann:
+	Melde den Fehler ("Kein Json Objekt").
+
+Das JsonObjekt countObjekt ist countAntwort als JsonObjekt.
+
+Wenn "total" nicht in countObjekt enthalten ist, dann:
+	Melde den Fehler ("Kein total in Antwort").
+
+Schreibe "total: ".
+Schreibe (den Wert für "total" in countObjekt als Zahl) auf eine Zeile.
+
+Räume client auf.
+Räume alles aus curl auf.
