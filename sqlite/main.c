@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-
 int test(void) {
 	struct sqlite3 *db;
 	int err = sqlite3_open("test.db", &db);

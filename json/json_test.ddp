@@ -1,0 +1,65 @@
+Binde "json" ein.
+Binde "Duden/Fehlerbehandlung" ein.
+Binde "Duden/Dateisystem" ein.
+Binde "Duden/Ausgabe" ein.
+Binde "Duden/Zeit" ein.
+Binde "hash_tabelle" ein.
+
+Schreibe ab jetzt alle Fehler.
+
+[ Die Funktion Teste_Json mit den Parametern json, erwartet und erwartet_text vom Typ Text, JsonWert und Text, gibt nichts zurück, macht:
+	Der JsonWert ergebnis ist der Json Wert in json.
+	Wenn ergebnis ungleich erwartet ist, dann:
+		Melde den Fehler ( "Falsches ergebnis: " verkettet mit erwartet_text verkettet mit '\n').
+	Sonst:
+		Schreibe ("Hurra!: " verkettet mit erwartet_text) auf eine Zeile.
+Und kann so benutzt werden:
+	"Erwarte das <json> zu <erwartet>:<erwartet_text> geparset wird"
+
+Erwarte das "true" zu (wahr als Variable):"wahr" geparset wird.
+Erwarte das "false" zu (falsch als Variable):"falsch" geparset wird.
+Erwarte das "null" zu JSON_NULL:"null" geparset wird.
+Erwarte das "[]" zu (eine Leere JsonWert Liste als Variable):"[]" geparset wird.
+Erwarte das "\"hallo\\tWelt\"" zu ("hallo\tWelt" als Variable):"hallo	Welt" geparset wird.
+Erwarte das "0" zu (0 als Variable):"0" geparset wird.
+Erwarte das "123" zu (123 als Variable):"123" geparset wird.
+Erwarte das "-123" zu ((-123) als Variable):"-123" geparset wird.
+Erwarte das "1.75" zu ((1,75) als Variable):"1.75" geparset wird.
+Erwarte das "-1.75" zu ((-1,75) als Variable):"-1.75" geparset wird.
+
+Erwarte das "[\"\"]" zu (eine Liste, die aus "" als Variable besteht als JsonWert):"[\"\"]" geparset wird.
+Erwarte das "[[]  ]" zu (eine Liste, die aus  eine leere JsonWert Liste als Variable besteht als JsonWert):"[[]  ]" geparset wird.
+
+Erwarte das "\"\\\"\"" zu ("\"" als Variable):"\"" geparset wird.
+Erwarte das "\"\\u0041\"" zu ("A" als Variable):"A" geparset wird.
+
+
+Erwarte das "{}" zu (eine leere HashTabelle als Variable):"{}" geparset wird.
+Die HashTabelle test_tabelle ist eine leere HashTabelle.
+Setze den Wert von "test" in test_tabelle auf ("test" als Variable).
+
+Erwarte das "{\"test\": \"test\"}" zu (test_tabelle als Variable):"{\"test\": \"test\"}" geparset wird.
+]
+[ Schreibe ( '프' ) auf eine Zeile.
+Schreibe ( '프' als Zahl ) auf eine Zeile.
+Schreibe (( "프" an der Stelle 1) als Zahl) auf eine Zeile.
+Der Text json ist "{\"display_name\":\"프렌즈 모드\"}".
+Schreibe json auf eine Zeile.
+Schreibe (json im Bereich von 17 bis 19) auf eine Zeile.
+Der JsonWert test_wert ist der Json Wert in json.
+Das JsonObjekt o ist test_wert als JsonObjekt.
+Schreibe "'".
+Schreibe (der Wert für "display_name" in o ein Text ist).
+Schreibe "'" auf eine Zeile.
+Schreibe (den Json Wert test_wert als Text) auf eine Zeile.  ]
+
+Die Datei mod_list_datei ist noch nicht offen.
+Öffne mod_list_datei mit dem Pfad "mod_list_back.json" zum Lesen.
+Der Text mod_list_json ist der gesamte Inhalt von mod_list_datei.
+Schließe mod_list_datei.
+
+Der JsonWert wert ist der Json Wert in mod_list_json.
+Schreibe den Fehler "parsing done!\n".
+Schreibe den Fehler ((die Millisekunden seit Programmstart durch 1000) als Text verkettet mit '\n').
+
+Schreibe (den Json Wert wert als Text) auf eine Zeile.

@@ -1,5 +1,5 @@
-#include "../../DDP/lib/runtime/include/ddpmemory.h"
-#include "../../DDP/lib/runtime/include/ddptypes.h"
+#include "DDP/ddpmemory.h"
+#include "DDP/ddptypes.h"
 #include <stdio.h>
 #include <string.h>
 

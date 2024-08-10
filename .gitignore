@@ -29,3 +29,6 @@ ffs_config.yaml
 
 *.ll
 *.o
+
+# local include path settings
+*.clangd

@@ -1,5 +1,5 @@
-#include "../DDP/lib/runtime/include/ddpmemory.h"
-#include "../DDP/lib/runtime/include/ddptypes.h"
+#include "DDP/ddpmemory.h"
+#include "DDP/ddptypes.h"
 #include "lib/sqlite3.h"
 #include <stdio.h>
 #include <string.h>
@@ -28,7 +28,8 @@ void Schließe_DB(Datenbank db) {
 	sqlite3_close((struct sqlite3 *)db);
 }
 
-ddpbool Statement_Vorbereiten(Datenbank pDB, SQLAusdruckRef pStmt, ddpstring *sql) {
+ddpbool Statement_Vorbereiten(Datenbank pDB, SQLAusdruckRef pStmt,
+							  ddpstring *sql) {
 	struct sqlite3 *db = (struct sqlite3 *)pDB;
 	struct sqlite3_stmt **stmt = (struct sqlite3_stmt **)pStmt;
 	int err = sqlite3_prepare_v2(db, sql->str, -1, stmt, NULL);

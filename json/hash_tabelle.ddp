@@ -1,0 +1,191 @@
+Binde "Duden/Laufzeit" ein.
+Binde "Duden/Ausgabe" ein.
+
+Die Funktion FNV_Hash mit dem Parameter t vom Typ Text Referenz, gibt eine Zahl zurück,
+ist in "hash_tabelle.ddp.c" definiert
+und kann so benutzt werden:
+	"der Hash von <t>" oder
+	"dem Hash von <t>" oder
+	"den Hash von <t>"
+
+[ ("", null) == Leerer Wert, ("", true|false) == Grabstein ]
+Wir nennen die oeffentliche Kombination aus
+	dem oeffentlichen Text Schlüssel mit Standardwert "",
+	der oeffentlichen Variable Wert mit Standardwert dem Standardwert von einer Variable,
+einen Eintrag,
+und erstellen sie so:
+	"ein leerer Eintrag" oder
+	"einem leerer Eintrag" oder
+	"ein Eintrag für <Schlüssel> mit Wert <Wert>" oder
+	"einem Eintrag für <Schlüssel> mit Wert <Wert>" oder
+	"einen Eintrag für <Schlüssel> mit Wert <Wert>"
+
+Die Funktion Grabstein gibt einen Eintrag zurück, macht:
+	Der Eintrag e ist der Standardwert von einem Eintrag.
+	Speichere wahr in Wert von e.
+	Gib e zurück.
+Und kann so benutzt werden:
+	"ein Grabstein" oder
+	"einen Grabstein" oder
+	"einem Grabstein"
+
+Die Funktion Ist_Leerer_Eintrag mit dem Parameter e vom Typ Eintrag Referenz, gibt einen Wahrheitswert zurück, macht:
+	Gib wahr, wenn Schlüssel von e gleich "" ist und Wert von e gleich dem Standardwert von einer Variable ist zurück.
+Und kann so benutzt werden:
+	"<e> ein leerer Eintrag ist"
+
+Die Funktion Ist_Grabstein mit dem Parameter e vom Typ Eintrag Referenz, gibt einen Wahrheitswert zurück, macht:
+	Gib wahr, wenn Schlüssel von e gleich "" ist und Wert von e ein Wahrheitswert ist zurück.
+Und kann so benutzt werden:
+	"<e> ein Grabstein ist"
+
+Die Funktion Ist_Leer_Oder_Grabstein mit dem Parameter e vom Typ Eintrag Referenz, gibt einen Wahrheitswert zurück, macht:
+	Gib wahr, wenn Schlüssel von e gleich "" ist zurück.
+Und kann so benutzt werden:
+	"<e> <!nicht> leer oder ein Grabstein ist"
+
+Wir nennen die oeffentliche Kombination aus
+	der Eintrag Liste einträge mit Standardwert 16 Mal ein leerer Eintrag,
+	der Zahl länge mit Standardwert 0,
+eine HashTabelle,
+und erstellen sie so:
+	"eine leere HashTabelle"
+
+Die Funktion Tabellen_Kapazität mit dem Parameter tabelle vom Typ HashTabelle Referenz, gibt eine Zahl zurück, macht:
+	Gib die Länge von einträge von tabelle zurück.
+Und kann so benutzt werden:
+	"die Kapazität von <tabelle>",
+	"der Kapazität von <tabelle>"
+
+Die oeffentliche Funktion Dump_Table mit dem Parameter tabelle vom Typ HashTabelle Referenz, gibt nichts zurück, macht:
+	Für jeden Eintrag e in einträge von tabelle, mache:
+		Wenn e ein Grabstein ist, dann: 
+			Schreibe "Grabstein" auf eine Zeile.
+			Fahre mit der Schleife fort.
+		Wenn e ein leerer Eintrag ist, dann:
+			Schreibe "Leer" auf eine Zeile.
+			Fahre mit der Schleife fort.
+
+	 	Schreibe "S: ".
+		Schreibe (Schlüssel von e).
+	 	Schreibe " W: ".
+
+		Die Variable v ist Wert von e.
+		Wenn v eine Zahl ist, Schreibe (v als Zahl) auf eine Zeile.
+		Wenn v eine Kommazahl ist, Schreibe (v als Kommazahl) auf eine Zeile.
+		Wenn v ein Wahrheitswert ist, Schreibe (v als Wahrheitswert) auf eine Zeile.
+		Wenn v ein Buchstabe ist, Schreibe (v als Buchstabe) auf eine Zeile.
+		Wenn v ein Text ist, Schreibe (v als Text) auf eine Zeile.
+Und kann so benutzt werden:
+	"dumpe <tabelle>"
+
+Die Funktion Finde_Eintrag mit den Parametern tabelle und schlüssel vom Typ HashTabelle Referenz und Text Referenz, gibt eine Zahl zurück, macht:
+	Die Zahl index ist der Hash von schlüssel modulo der Kapazität von tabelle plus 1.
+	Die Zahl grabstein_index ist -1.
+
+	Solange wahr, mache:
+		Wenn (einträge von tabelle an der Stelle index) ein leerer Eintrag ist, dann:
+			Gib grabstein_index, falls grabstein_index ungleich -1 ist, ansonsten index zurück.
+		Wenn aber (einträge von tabelle an der Stelle index) ein Grabstein ist und grabstein_index gleich -1 ist, dann:
+			Speichere index in grabstein_index.
+		Wenn aber Schlüssel von (einträge von tabelle an der Stelle index) gleich schlüssel ist, dann:
+			Gib index zurück.
+		
+		Speichere (index plus 1) modulo die Kapazität von tabelle in index.
+		Speichere index plus 1, falls index gleich 0 ist, ansonsten index in index.
+
+	Gib index zurück.
+Und kann so benutzt werden:
+	"der Index für <schlüssel> in <tabelle>"
+
+Die Funktion Kapazität_Anpassen mit den Parametern tabelle und neue_kapazität vom Typ HashTabelle Referenz und Zahl, gibt nichts zurück, macht:
+	Die HashTabelle neue_tabelle ist eine leere HashTabelle.
+	:
+		Die Eintrag Liste neue_einträge ist neue_kapazität Mal ein leerer Eintrag.
+		Speichere neue_einträge in einträge von neue_tabelle.
+
+	Für jede Zahl i von 1 bis die Kapazität von tabelle, mache:
+		Wenn (einträge von tabelle an der Stelle i) leer oder ein Grabstein ist, dann:
+			Fahre mit der Schleife fort.
+
+		Die Zahl eintrag_index ist der Index für (Schlüssel von (einträge von tabelle an der Stelle i)) in neue_tabelle.
+		Speichere (einträge von tabelle an der Stelle i) in (einträge von neue_tabelle an der Stelle eintrag_index).
+		Erhoehe länge von neue_tabelle um 1.
+
+	Speichere neue_tabelle in tabelle.
+Und kann so benutzt werden:
+	"Passe die Kapazität von <tabelle> auf <neue_kapazität> an"
+
+Die Funktion Ist_Neuer_Schlüssel_Index mit den Parametern index und tabelle vom Typ Zahl und HashTabelle Referenz, gibt einen Wahrheitswert zurück, macht:
+	Gib wahr, wenn (einträge von tabelle an der Stelle index) ein leerer Eintrag ist zurück.
+Und kann so benutzt werden:
+	"<index> für einen neuen Schlüssel in <tabelle> steht"
+
+Die Kommazahl MAXIMALER_LADUNGS_FAKTOR ist 0,75.
+
+Die oeffentliche Funktion Tabellen_Wert_Setzen mit den Parametern tabelle, schlüssel und wert vom Typ HashTabelle Referenz, Text und Variable, gibt einen Wahrheitswert zurück, macht:
+	Wenn schlüssel gleich "" ist, löse einen Laufzeitfehler mit der Nachricht "Ein leerer Text ist kein valider Schlüssel" und dem Code 1 aus.
+
+	Wenn länge von tabelle plus 1 groesser als die Kapazität von tabelle mal MAXIMALER_LADUNGS_FAKTOR ist oder die Kapazität von tabelle gleich 0 ist, dann:
+		Die Zahl neue_kapazität ist (die Kapazität von tabelle mal 2), falls die Kapazität von tabelle ungleich 0 ist, ansonsten 16.
+		Passe die Kapazität von tabelle auf neue_kapazität an.
+
+	Die Zahl eintrag_index ist der Index für schlüssel in tabelle.
+	Der Wahrheitswert ist_neuer_schlüssel ist wahr, wenn eintrag_index für einen neuen Schlüssel in tabelle steht.
+
+	Wenn ist_neuer_schlüssel, dann: 
+		Erhoehe länge von tabelle um 1.
+	Speichere einen Eintrag für schlüssel mit Wert wert in einträge von tabelle an der Stelle eintrag_index.
+
+	Gib ist_neuer_schlüssel zurück.
+Und kann so benutzt werden:
+	"Setze den Wert von <schlüssel> in <tabelle> auf <wert>" oder
+	"das Speichern von <schlüssel> mit Wert <wert> in <tabelle> einen neuen Schlüssel hinzugefügt hat"
+
+Die oeffentliche Funktion Tabellen_Wert_Lesen mit den Parametern tabelle und schlüssel vom Typ HashTabelle Referenz und Text, gibt eine Variable zurück, macht:
+	Wenn schlüssel gleich "" ist, löse einen Laufzeitfehler mit der Nachricht "Ein leerer Text ist kein valider Schlüssel" und dem Code 1 aus.
+	
+	Die Zahl eintrag_index ist der Index für schlüssel in tabelle.
+
+	Wenn (einträge von tabelle an der Stelle eintrag_index) leer oder ein Grabstein ist, dann:
+		Gib der Standardwert von einer Variable zurück.
+	Gib Wert von (einträge von tabelle an der Stelle eintrag_index) zurück.
+Und kann so benutzt werden:
+	"der Wert für <schlüssel> in <tabelle>" oder
+	"dem Wert für <schlüssel> in <tabelle>" oder
+	"den Wert für <schlüssel> in <tabelle>"
+
+Die oeffentliche Funktion Tabelle_Hat_Schlüssel mit den Parametern tabelle und schlüssel vom Typ HashTabelle Referenz und Text, gibt einen Wahrheitswert zurück, macht:
+	Wenn schlüssel gleich "" ist, löse einen Laufzeitfehler mit der Nachricht "Ein leerer Text ist kein valider Schlüssel" und dem Code 1 aus.
+	
+	Die Zahl eintrag_index ist der Index für schlüssel in tabelle.
+
+	Gib falsch, wenn (einträge von tabelle an der Stelle eintrag_index) leer oder ein Grabstein ist zurück.
+Und kann so benutzt werden:
+	"<schlüssel> <!nicht> in <tabelle> enthalten ist"
+
+Die oeffentliche Funktion Tabellen_Wert_Loeschen mit den Parametern tabelle und schlüssel vom Typ HashTabelle Referenz und Text, gibt eine Variable zurück, macht:
+	Wenn schlüssel gleich "" ist, löse einen Laufzeitfehler mit der Nachricht "Ein leerer Text ist kein valider Schlüssel" und dem Code 1 aus.
+	
+	Die Zahl eintrag_index ist der Index für schlüssel in tabelle.
+
+	Wenn (einträge von tabelle an der Stelle eintrag_index) leer oder ein Grabstein ist, dann:
+		Gib der Standardwert von einer Variable zurück.
+
+	Die Variable wert ist Wert von (einträge von tabelle an der Stelle eintrag_index).
+	Speichere einen Grabstein in (einträge von tabelle an der Stelle eintrag_index).
+	Gib wert zurück.
+Und kann so benutzt werden:
+	"Loesche den Wert für <schlüssel> aus <tabelle>" oder
+	"der geloeschte Wert für <schlüssel> in <tabelle>"
+
+Die oeffentliche Funktion Tabellen_Einträge mit dem Parameter tabelle vom Typ HashTabelle Referenz, gibt eine Eintrag Liste zurück, macht:
+	Die Eintrag Liste einträge ist die Kapazität von tabelle Mal ein leerer Eintrag.
+	Die Zahl j ist 1.
+	Für jede Zahl i von 1 bis die Länge von einträge von tabelle, mache:
+		Wenn (einträge von tabelle an der Stelle i) nicht leer oder ein Grabstein ist, dann:
+			Speichere (einträge von tabelle an der Stelle i) in (einträge an der Stelle j).
+			Erhoehe j um 1.
+	Gib einträge bis zum (j minus 1). Element zurück.
+Und kann so benutzt werden:
+	"die Einträge von <tabelle>"
