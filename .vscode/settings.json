@@ -2,5 +2,6 @@
 	"ddp.DDPLS.useSystemwideInstall": true,
 	"clangd.fallbackFlags": [
 		"-I${env:DDPPATH}/lib/runtime/include/",
+		"-I${env:DDPPATH}/lib/stdlib/include/",
 	]
 }

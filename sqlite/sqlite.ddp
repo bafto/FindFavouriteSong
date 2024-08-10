@@ -1,6 +1,6 @@
 Binde "Duden/Ausgabe" ein.
 Binde "Duden/Laufzeit" ein.
-
+Binde "Duden/Fehlerbehandlung" ein.
 Binde "../C/C" ein.
 
 Wir definieren eine Datenbank als einen Zeiger.
@@ -16,8 +16,8 @@ Die Funktion Neuer_SQLAusdruck gibt einen SQLAusdruck zurück, macht:
 Und kann so benutzt werden:
 	"ein neuer SQLAusdruck"
 
-Die Funktion Oeffne_DB mit den Parametern db und db_name vom Typ Datenbank Referenz und Text, gibt einen Wahrheitswert zurück,
-ist in "sqlite.ddp.c" definiert
+Die Funktion Oeffne_DB mit den Parametern db und db_name vom Typ Datenbank Referenz und Text, gibt nichts zurück,
+ist in "lib/sqlite3.o" definiert
 und kann so benutzt werden:
 	"Oeffne <db> als <db_name>" oder
 	"<db> erfolgreich als <db_name> geoeffnet wurde"
@@ -27,11 +27,10 @@ ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Schließe <db>"
 
-Die Funktion Statement_Vorbereiten mit den Parametern db, stmt und sql vom Typ Datenbank, SQLAusdruck Referenz und Text, gibt einen Wahrheitswert zurück,
+Die Funktion Statement_Vorbereiten mit den Parametern db, stmt und sql vom Typ Datenbank, SQLAusdruck Referenz und Text, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
-	"Bereite <stmt> in <db> mit dem SQL <sql> vor" oder
-	"<stmt> erfolgreich in <db> mit dem SQL <sql> vorbereitet wurde"
+	"Bereite <stmt> in <db> mit dem SQL Ausdruck <sql> vor" oder
 
 Die Funktion Statement_Schließen mit dem Parameter stmt vom Typ SQLAusdruck, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
@@ -44,25 +43,43 @@ und kann so benutzt werden:
 	"Bereite die nächste Zeile in <stmt> vor" oder
 	"die nächste Zeile in <stmt> vorbereitet wurde"
 
-Die Funktion Lies_Text mit dem Parameter stmt vom Typ SQLAusdruck, gibt einen Text zurück,
+Die Funktion War_NULL mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt einen Wahrheitswert zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
-	"der nächste Text aus <stmt>"
+	"die Spalte <i> im letzten Wert von <stmt> <!nicht> NULL war"
 
+Die Funktion Lies_Spalte_Text mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt einen Text zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"der Text aus Spalte <i> im letzten Wert von <stmt>",
+	"den Text aus Spalte <i> im letzten Wert von <stmt>",
+	"dem Text aus Spalte <i> im letzten Wert von <stmt>"
+
+Die Funktion Lies_Spalte_Zahl mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt eine Zahl zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"die Zahl aus Spalte <i> im letzten Wert von <stmt>"
+
+Die Funktion Lies_Spalte_Kommazahl mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt eine Kommazahl zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"die Kommazahl aus Spalte <i> im letzten Wert von <stmt>"
 
 Die Datenbank db ist eine neue Datenbank.
-
-Wenn db erfolgreich als "test.db" geoeffnet wurde, Schreibe "DB ist offen" auf eine Zeile.
-Sonst beende das Programm mit Code 1.
+Oeffne db als "test.db".
+Wenn es dabei einen Fehler gab, beende das Programm mit Code 1.
+Sonst Schreibe "DB ist offen" auf eine Zeile.
 
 Der SQLAusdruck stmt ist ein neuer SQLAusdruck.
 
-Wenn nicht stmt erfolgreich in db mit dem SQL "SELECT name FROM people" vorbereitet wurde, dann:
+Bereite stmt in db mit dem SQL Ausdruck "SELECT name FROM people" vor.
+Wenn es dabei einen Fehler gab, dann:
+	Schreibe (den letzten Fehler) auf eine Zeile.
 	Schließe db.
 	Beende das Programm mit Code 2.
 
 Solange die nächste Zeile in stmt vorbereitet wurde, mache:
-	Der Text t ist der nächste Text aus stmt.
+	Der Text t ist der Text aus Spalte 0 im letzten Wert von stmt.
 	Schreibe t auf eine Zeile.
 
 Schließe stmt.
