@@ -46,6 +46,14 @@ void Statement_Vorbereiten(Datenbank pDB, SQLAusdruckRef pStmt,
 	}
 }
 
+void Statement_Zuruecksetzen(SQLAusdruck stmt) {
+	int err = sqlite3_reset((struct sqlite3_stmt *)stmt);
+	if (err != SQLITE_OK) {
+		ddp_error("Fehler beim Zurücksetzen des Statements: %s\n",
+				  false, sqlite3_errmsg(sqlite3_db_handle((struct sqlite3_stmt *)stmt)));
+	}
+}
+
 void Statement_Schließen(SQLAusdruck stmt) {
 	sqlite3_finalize((struct sqlite3_stmt *)stmt);
 }
@@ -85,16 +93,34 @@ ddpfloat Lies_Spalte_Kommazahl(SQLAusdruck stmt, ddpint spalte) {
 	return sqlite3_column_double((struct sqlite3_stmt *)stmt, spalte);
 }
 
-void Lies_Text(ddpstring *ret, SQLAusdruck stmt) {
-	const uint8_t *text = sqlite3_column_text((struct sqlite3_stmt *)stmt, 0);
-	*ret = DDP_EMPTY_STRING;
-
-	if (!text) {
-		return;
+void Setze_Parameter_Null(SQLAusdruck stmt, ddpint i) {
+	int err = sqlite3_bind_null((struct sqlite3_stmt *)stmt, (int)i);
+	if (err != SQLITE_OK) {
+		ddp_error("Fehler beim Setzen des Parameters " DDP_INT_FMT " auf NULL: %s\n",
+				  false, i, sqlite3_errmsg(sqlite3_db_handle((struct sqlite3_stmt *)stmt)));
 	}
+}
 
-	int len = strlen((const char *)text);
-	ret->cap = len + 1;
-	ret->str = DDP_ALLOCATE(char, ret->cap);
-	memcpy(ret->str, text, len);
+void Setze_Parameter_Text(SQLAusdruck stmt, ddpint i, ddpstring *text) {
+	int err = sqlite3_bind_text((struct sqlite3_stmt *)stmt, (int)i, text->str, -1, SQLITE_TRANSIENT);
+	if (err != SQLITE_OK) {
+		ddp_error("Fehler beim Setzen des Parameters " DDP_INT_FMT " auf einen Text: %s\n",
+				  false, sqlite3_errmsg(sqlite3_db_handle((struct sqlite3_stmt *)stmt)));
+	}
+}
+
+void Setze_Parameter_Zahl(SQLAusdruck stmt, ddpint i, ddpint zahl) {
+	int err = sqlite3_bind_int64((struct sqlite3_stmt *)stmt, (int)i, zahl);
+	if (err != SQLITE_OK) {
+		ddp_error("Fehler beim Setzen des Parameters " DDP_INT_FMT " auf eine Zahl: %s\n",
+				  false, sqlite3_errmsg(sqlite3_db_handle((struct sqlite3_stmt *)stmt)));
+	}
+}
+
+void Setze_Parameter_Kommazahl(SQLAusdruck stmt, ddpint i, ddpfloat zahl) {
+	int err = sqlite3_bind_double((struct sqlite3_stmt *)stmt, (int)i, zahl);
+	if (err != SQLITE_OK) {
+		ddp_error("Fehler beim Setzen des Parameters " DDP_INT_FMT " auf eine Kommazahl: %s\n",
+				  false, sqlite3_errmsg(sqlite3_db_handle((struct sqlite3_stmt *)stmt)));
+	}
 }

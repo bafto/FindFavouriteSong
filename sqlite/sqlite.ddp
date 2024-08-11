@@ -30,7 +30,12 @@ und kann so benutzt werden:
 Die Funktion Statement_Vorbereiten mit den Parametern db, stmt und sql vom Typ Datenbank, SQLAusdruck Referenz und Text, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
-	"Bereite <stmt> in <db> mit dem SQL Ausdruck <sql> vor" oder
+	"Bereite <stmt> in <db> mit dem SQL Ausdruck <sql> vor"
+
+Die Funktion Statement_Zuruecksetzen mit dem Parameter stmt vom Typ SQLAusdruck, gibt nichts zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Setze <stmt> zurück"
 
 Die Funktion Statement_Schließen mit dem Parameter stmt vom Typ SQLAusdruck, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
@@ -64,6 +69,30 @@ Die Funktion Lies_Spalte_Kommazahl mit den Parametern stmt und i vom Typ SQLAusd
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"die Kommazahl aus Spalte <i> im letzten Wert von <stmt>"
+
+Die Funktion Setze_Parameter_Null mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt nichts zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Setze Parameter <i> in <stmt> auf NULL",
+	"Setze den <i>. Parameter in <stmt> auf NULL"
+
+Die Funktion Setze_Parameter_Text mit den Parametern stmt, i und text vom Typ SQLAusdruck, Zahl und Text, gibt nichts zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Setze Parameter <i> in <stmt> auf <text>",
+	"Setze den <i>. Parameter in <stmt> auf <text>"
+
+Die Funktion Setze_Parameter_Zahl mit den Parametern stmt, i und zahl vom Typ SQLAusdruck, Zahl und Zahl, gibt nichts zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Setze Parameter <i> in <stmt> auf <zahl>",
+	"Setze den <i>. Parameter in <stmt> auf <zahl>"
+
+Die Funktion Setze_Parameter_Kommazahl mit den Parametern stmt, i und zahl vom Typ SQLAusdruck, Zahl und Kommazahl, gibt nichts zurück,
+ist in "sqlite.ddp.c" definiert
+und kann so benutzt werden:
+	"Setze Parameter <i> in <stmt> auf <zahl>",
+	"Setze den <i>. Parameter in <stmt> auf <zahl>"
 
 Die Datenbank db ist eine neue Datenbank.
 Oeffne db als "test.db".
