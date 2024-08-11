@@ -35,15 +35,19 @@ void Schließe_DB(Datenbank db) {
 	}
 }
 
-void Statement_Vorbereiten(Datenbank pDB, SQLAusdruckRef pStmt,
-						   ddpstring *sql) {
+void Statement_Vorbereiten_Rest(Datenbank pDB, SQLAusdruckRef pStmt, ddpstring *sql, ddpstringref rest) {
 	struct sqlite3 *db = (struct sqlite3 *)pDB;
 	struct sqlite3_stmt **stmt = (struct sqlite3_stmt **)pStmt;
-	int err = sqlite3_prepare_v2(db, sql->str, -1, stmt, NULL);
+	const char *rest_str;
+	int err = sqlite3_prepare_v2(db, sql->str, sql->cap, stmt, &rest_str);
 	if (err != SQLITE_OK) {
 		ddp_error("Fehler beim Vorbereiten des Statements: %s\n",
 				  false, sqlite3_errmsg(db));
 	}
+	ddp_free_string(rest);
+	rest->cap = sql->cap - (rest_str - sql->str);
+	rest->str = DDP_ALLOCATE(char, rest->cap);
+	memcpy(rest->str, rest_str, rest->cap);
 }
 
 void Statement_Zuruecksetzen(SQLAusdruck stmt) {

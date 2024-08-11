@@ -27,9 +27,15 @@ ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Schließe <db>"
 
-Die Funktion Statement_Vorbereiten mit den Parametern db, stmt und sql vom Typ Datenbank, SQLAusdruck Referenz und Text, gibt nichts zurück,
+Die Funktion Statement_Vorbereiten_Rest mit den Parametern db, stmt, sql und rest vom Typ Datenbank, SQLAusdruck Referenz, Text und Text Referenz, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
+	"Bereite <stmt> in <db> mit dem SQL Ausdruck <sql> vor und speichere den Rest in <rest>"
+
+Die Funktion Statement_Vorbereiten mit den Parametern db, stmt und sql vom Typ Datenbank, SQLAusdruck Referenz und Text, gibt nichts zurück, macht:
+	Der Text rest ist "".
+	Bereite stmt in db mit dem SQL Ausdruck sql vor und speichere den Rest in rest.
+Und kann so benutzt werden:
 	"Bereite <stmt> in <db> mit dem SQL Ausdruck <sql> vor"
 
 Die Funktion Statement_Zuruecksetzen mit dem Parameter stmt vom Typ SQLAusdruck, gibt nichts zurück,
