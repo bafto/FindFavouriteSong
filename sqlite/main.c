@@ -12,9 +12,15 @@ int test(void) {
 	}
 
 	struct sqlite3_stmt *stmt;
-	err = sqlite3_prepare_v2(db, "SELECT name FROM people", -1, &stmt, NULL);
+	const char *zsql = "CREATE TABLE IF NOT EXISTS people(name varchar); SELECT * FROM sqlite_master;";
+	while ((err = sqlite3_prepare_v2(db, zsql, -1, &stmt, &zsql)) == SQLITE_OK) {
+		printf("%p\n", stmt);
+		if (stmt == NULL) {
+			return 2;
+		}
+	}
 	if (err != SQLITE_OK) {
-		fprintf(stderr, "Error in preparing statement: %s", sqlite3_errmsg(db));
+		fprintf(stderr, "Error in preparing statement (%d): %s", err, sqlite3_errmsg(db));
 		sqlite3_close(db);
 		return 1;
 	}

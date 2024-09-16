@@ -1,0 +1,20 @@
+Binde "../sqlite/sqlite" ein.
+Binde "../C/C" ein.
+Binde "Duden/Fehlerbehandlung" ein.
+
+Der oeffentliche SQLAusdruck alle_playlists_query ist ein neuer SQLAusdruck.
+Der oeffentliche SQLAusdruck playlist_items_query ist ein neuer SQLAusdruck.
+
+Die oeffentliche Funktion Queries_Vorbereiten mit dem Parameter db vom Typ Datenbank, gibt nichts zurück, macht:
+    Bereite alle_playlists_query in db mit dem SQL Ausdruck "SELECT * FROM playlists" vor.
+    Wenn es dabei einen Fehler gab, verlasse die Funktion.
+    Bereite playlist_items_query in db mit dem SQL Ausdruck "SELECT * FROM playlist_item WHERE playlist = ?" vor.
+Und kann so benutzt werden:
+    "bereite alle SQL Ausdrücke in <db> vor" oder
+    "Bereite alle SQL Ausdrück in <db> vor"
+
+Die oeffentliche Funktion Queries_Schließen gibt nichts zurück, macht:
+    Schließe alle_playlists_query.
+    Schließe playlist_items_query.
+Und kann so benutzt werden:
+    "Schließe alle SQL Ausdrücke"

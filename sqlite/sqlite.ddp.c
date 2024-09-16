@@ -35,26 +35,27 @@ void Schließe_DB(Datenbank db) {
 	}
 }
 
-void Statement_Vorbereiten_Rest(Datenbank pDB, SQLAusdruckRef pStmt, ddpstring *sql, ddpstringref rest) {
+ddpbool Statement_Vorbereiten_Rest(Datenbank pDB, SQLAusdruckRef pStmt, ddpstring *sql, ddpstringref rest) {
 	struct sqlite3 *db = (struct sqlite3 *)pDB;
 	struct sqlite3_stmt **stmt = (struct sqlite3_stmt **)pStmt;
 	const char *rest_str;
 	int err = sqlite3_prepare_v2(db, sql->str, sql->cap, stmt, &rest_str);
 	if (err != SQLITE_OK) {
-		ddp_error("Fehler beim Vorbereiten des Statements: %s\n",
-				  false, sqlite3_errmsg(db));
+		ddp_error("Fehler beim Vorbereiten des Statements (%d): %s\n",
+				  false, err, sqlite3_errmsg(db));
 	}
 	ddp_free_string(rest);
 	rest->cap = sql->cap - (rest_str - sql->str);
 	rest->str = DDP_ALLOCATE(char, rest->cap);
 	memcpy(rest->str, rest_str, rest->cap);
+	return *stmt != NULL;
 }
 
 void Statement_Zuruecksetzen(SQLAusdruck stmt) {
 	int err = sqlite3_reset((struct sqlite3_stmt *)stmt);
 	if (err != SQLITE_OK) {
-		ddp_error("Fehler beim Zurücksetzen des Statements: %s\n",
-				  false, sqlite3_errmsg(sqlite3_db_handle((struct sqlite3_stmt *)stmt)));
+		ddp_error("Fehler beim Zurücksetzen des Statements (%d): %s\n",
+				  false, err, sqlite3_errmsg(sqlite3_db_handle((struct sqlite3_stmt *)stmt)));
 	}
 }
 
@@ -63,12 +64,12 @@ void Statement_Schließen(SQLAusdruck stmt) {
 }
 
 ddpbool Naechste_Zeile_Vorbereiten(SQLAusdruck stmt) {
-	int err = sqlite3_step((struct sqlite3_stmt *)stmt) == SQLITE_ROW;
-	if (err != SQLITE_DONE && err != SQLITE_ROW) {
-		ddp_error("Fehler beim Ausführen des Statements: %s\n",
-				  false, sqlite3_errmsg(sqlite3_db_handle((struct sqlite3_stmt *)stmt)));
+	int err = sqlite3_step((struct sqlite3_stmt *)stmt);
+	if (err != SQLITE_ROW && err != SQLITE_DONE) {
+		ddp_error("Fehler beim Ausführen des Statements (%d): %s\n",
+				  false, err, sqlite3_errmsg(sqlite3_db_handle((struct sqlite3_stmt *)stmt)));
 	}
-	return err == SQLITE_ROW;
+	return err == SQLITE_ROW || err == SQLITE_DONE;
 }
 
 ddpbool War_NULL(SQLAusdruck stmt, ddpint spalte) {

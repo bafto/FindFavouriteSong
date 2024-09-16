@@ -3,119 +3,114 @@ Binde "Duden/Laufzeit" ein.
 Binde "Duden/Fehlerbehandlung" ein.
 Binde "../C/C" ein.
 
-Wir definieren eine Datenbank als einen Zeiger.
-Wir definieren einen SQLAusdruck als einen Zeiger.
+Wir definieren eine Datenbank oeffentlich als einen Zeiger.
+Wir definieren einen SQLAusdruck oeffentlich als einen Zeiger.
 
-Die Funktion Neue_Datenbank gibt eine Datenbank zurück, macht:
+Die oeffentliche Funktion Neue_Datenbank gibt eine Datenbank zurück, macht:
 	Gib NULL als Datenbank zurück.
 Und kann so benutzt werden:
 	"eine neue Datenbank"
 
-Die Funktion Neuer_SQLAusdruck gibt einen SQLAusdruck zurück, macht:
+Die oeffentliche Funktion Neuer_SQLAusdruck gibt einen SQLAusdruck zurück, macht:
 	Gib NULL als SQLAusdruck zurück.
 Und kann so benutzt werden:
 	"ein neuer SQLAusdruck"
 
-Die Funktion Oeffne_DB mit den Parametern db und db_name vom Typ Datenbank Referenz und Text, gibt nichts zurück,
+Die oeffentliche Funktion Oeffne_DB mit den Parametern db und db_name vom Typ Datenbank Referenz und Text, gibt nichts zurück,
 ist in "lib/sqlite3.o" definiert
 und kann so benutzt werden:
 	"Oeffne <db> als <db_name>" oder
 	"<db> erfolgreich als <db_name> geoeffnet wurde"
 
-Die Funktion Schließe_DB mit dem Parameter db vom Typ Datenbank, gibt nichts zurück,
+Die oeffentliche Funktion Schließe_DB mit dem Parameter db vom Typ Datenbank, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Schließe <db>"
 
-Die Funktion Statement_Vorbereiten_Rest mit den Parametern db, stmt, sql und rest vom Typ Datenbank, SQLAusdruck Referenz, Text und Text Referenz, gibt nichts zurück,
+Die oeffentliche Funktion Statement_Vorbereiten_Rest mit den Parametern db, stmt, sql und rest vom Typ Datenbank, SQLAusdruck Referenz, Text und Text Referenz, gibt einen Wahrheitswert zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
-	"Bereite <stmt> in <db> mit dem SQL Ausdruck <sql> vor und speichere den Rest in <rest>"
+	"Bereite <stmt> in <db> mit dem SQL Ausdruck <sql> vor und speichere den Rest in <rest>" oder
+	" <stmt> in <db> mit dem SQL Ausdruck <sql> und Rest <rest> vorbereitet wurde"
 
-Die Funktion Statement_Vorbereiten mit den Parametern db, stmt und sql vom Typ Datenbank, SQLAusdruck Referenz und Text, gibt nichts zurück, macht:
+Die oeffentliche Funktion Statement_Vorbereiten mit den Parametern db, stmt und sql vom Typ Datenbank, SQLAusdruck Referenz und Text, gibt nichts zurück, macht:
 	Der Text rest ist "".
 	Bereite stmt in db mit dem SQL Ausdruck sql vor und speichere den Rest in rest.
 Und kann so benutzt werden:
-	"Bereite <stmt> in <db> mit dem SQL Ausdruck <sql> vor"
+	"Bereite <stmt> in <db> mit dem SQL Ausdruck <sql> vor" oder
+	"<stmt> in <db> mit dem SQL Ausdruck <sql> vorbereitet wurde"
 
-Die Funktion Statement_Zuruecksetzen mit dem Parameter stmt vom Typ SQLAusdruck, gibt nichts zurück,
+
+Die oeffentliche Funktion Statement_Zuruecksetzen mit dem Parameter stmt vom Typ SQLAusdruck, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Setze <stmt> zurück"
 
-Die Funktion Statement_Schließen mit dem Parameter stmt vom Typ SQLAusdruck, gibt nichts zurück,
+Die oeffentliche Funktion Statement_Schließen mit dem Parameter stmt vom Typ SQLAusdruck, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Schließe <stmt>"
 
-Die Funktion Naechste_Zeile_Vorbereiten mit dem Parameter stmt vom Typ SQLAusdruck, gibt einen Wahrheitswert zurück,
+Die oeffentliche Funktion Naechste_Zeile_Vorbereiten mit dem Parameter stmt vom Typ SQLAusdruck, gibt einen Wahrheitswert zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Bereite die nächste Zeile in <stmt> vor" oder
-	"die nächste Zeile in <stmt> vorbereitet wurde"
+	"die nächste Zeile in <stmt> vorbereitet wurde" oder
+	"Führe <stmt> aus" oder
+	"<stmt> ausgeführt wurde"
 
-Die Funktion War_NULL mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt einen Wahrheitswert zurück,
+Die oeffentliche Funktion Alle_Statements_Ausführen mit den Parametern db und sql vom Typ Datenbank und Text, gibt nichts zurück, macht:
+	Der SQLAusdruck stmt ist ein neuer SQLAusdruck.
+	Solange stmt in db mit dem SQL Ausdruck sql und Rest sql vorbereitet wurde, mache:
+		Wenn es dabei einen Fehler gab, verlasse die Schleife.
+		Führe stmt aus.		
+		Wenn es dabei einen Fehler gab, verlasse die Schleife.
+		Schließe stmt.
+Und kann so benutzt werden:
+	"Führe jeden Ausdruck in <sql> in <db> aus"
+
+Die oeffentliche Funktion War_NULL mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt einen Wahrheitswert zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"die Spalte <i> im letzten Wert von <stmt> <!nicht> NULL war"
 
-Die Funktion Lies_Spalte_Text mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt einen Text zurück,
+Die oeffentliche Funktion Lies_Spalte_Text mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt einen Text zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"der Text aus Spalte <i> im letzten Wert von <stmt>",
 	"den Text aus Spalte <i> im letzten Wert von <stmt>",
 	"dem Text aus Spalte <i> im letzten Wert von <stmt>"
 
-Die Funktion Lies_Spalte_Zahl mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt eine Zahl zurück,
+Die oeffentliche Funktion Lies_Spalte_Zahl mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt eine Zahl zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"die Zahl aus Spalte <i> im letzten Wert von <stmt>"
 
-Die Funktion Lies_Spalte_Kommazahl mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt eine Kommazahl zurück,
+Die oeffentliche Funktion Lies_Spalte_Kommazahl mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt eine Kommazahl zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"die Kommazahl aus Spalte <i> im letzten Wert von <stmt>"
 
-Die Funktion Setze_Parameter_Null mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt nichts zurück,
+Die oeffentliche Funktion Setze_Parameter_Null mit den Parametern stmt und i vom Typ SQLAusdruck und Zahl, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Setze Parameter <i> in <stmt> auf NULL",
 	"Setze den <i>. Parameter in <stmt> auf NULL"
 
-Die Funktion Setze_Parameter_Text mit den Parametern stmt, i und text vom Typ SQLAusdruck, Zahl und Text, gibt nichts zurück,
+Die oeffentliche Funktion Setze_Parameter_Text mit den Parametern stmt, i und text vom Typ SQLAusdruck, Zahl und Text, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Setze Parameter <i> in <stmt> auf <text>",
 	"Setze den <i>. Parameter in <stmt> auf <text>"
 
-Die Funktion Setze_Parameter_Zahl mit den Parametern stmt, i und zahl vom Typ SQLAusdruck, Zahl und Zahl, gibt nichts zurück,
+Die oeffentliche Funktion Setze_Parameter_Zahl mit den Parametern stmt, i und zahl vom Typ SQLAusdruck, Zahl und Zahl, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Setze Parameter <i> in <stmt> auf <zahl>",
 	"Setze den <i>. Parameter in <stmt> auf <zahl>"
 
-Die Funktion Setze_Parameter_Kommazahl mit den Parametern stmt, i und zahl vom Typ SQLAusdruck, Zahl und Kommazahl, gibt nichts zurück,
+Die oeffentliche Funktion Setze_Parameter_Kommazahl mit den Parametern stmt, i und zahl vom Typ SQLAusdruck, Zahl und Kommazahl, gibt nichts zurück,
 ist in "sqlite.ddp.c" definiert
 und kann so benutzt werden:
 	"Setze Parameter <i> in <stmt> auf <zahl>",
 	"Setze den <i>. Parameter in <stmt> auf <zahl>"
-
-Die Datenbank db ist eine neue Datenbank.
-Oeffne db als "test.db".
-Wenn es dabei einen Fehler gab, beende das Programm mit Code 1.
-Sonst Schreibe "DB ist offen" auf eine Zeile.
-
-Der SQLAusdruck stmt ist ein neuer SQLAusdruck.
-
-Bereite stmt in db mit dem SQL Ausdruck "SELECT name FROM people" vor.
-Wenn es dabei einen Fehler gab, dann:
-	Schreibe (den letzten Fehler) auf eine Zeile.
-	Schließe db.
-	Beende das Programm mit Code 2.
-
-Solange die nächste Zeile in stmt vorbereitet wurde, mache:
-	Der Text t ist der Text aus Spalte 0 im letzten Wert von stmt.
-	Schreibe t auf eine Zeile.
-
-Schließe stmt.
-Schließe db.

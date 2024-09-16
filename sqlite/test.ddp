@@ -1,0 +1,36 @@
+Binde "sqlite" ein.
+Binde "Duden/Fehlerbehandlung" ein.
+Binde "Duden/Ausgabe" ein.
+Binde "Duden/Laufzeit" ein.
+Binde "Duden/Dateisystem" ein.
+
+Schreibe ab jetzt alle Fehler.
+
+Die Datenbank db ist eine neue Datenbank.
+
+Oeffne db als "test.db".
+Wenn es dabei einen Fehler gab, beende das Programm mit Code 1.
+Sonst Schreibe "DB ist offen" auf eine Zeile.
+
+Die Datei datei ist noch nicht offen.
+
+Oeffne datei mit dem Pfad "../schema.sql" zum Lesen.
+Wenn es dabei einen Fehler gab, beende das Programm mit Code 1.
+
+Der Text sql ist der gesamte Inhalt von datei.
+Wenn es dabei einen Fehler gab, beende das Programm mit Code 1.
+
+Führe jeden Ausdruck in sql in db aus.
+Wenn es dabei einen Fehler gab, beende das Programm mit Code 1.
+Sonst Schreibe "Schema wurde erstellt" auf eine Zeile.
+
+Schließe datei.
+Oeffne datei mit dem Pfad "../testdata.sql" zum Lesen.
+
+Speichere den gesamten Inhalt von datei in sql.
+Wenn es dabei einen Fehler gab, beende das Programm mit Code 1.
+
+Schließe datei.
+Führe jeden Ausdruck in sql in db aus.
+Wenn es dabei einen Fehler gab, beende das Programm mit Code 1.
+Sonst Schreibe "Testdaten erstellt!" auf eine Zeile.

@@ -1,0 +1,71 @@
+Binde "../sqlite/sqlite" ein.
+Binde "queries" ein.
+
+Wir nennen die oeffentliche Kombination aus
+    dem oeffentlichen Text id mit Standardwert "",
+    dem oeffentlichen Text name mit Standardwert "",
+    dem oeffentlichen Text url mit Standardwert "",
+eine Playlist,
+und erstellen sie so:
+    "eine neue Playlist"
+
+Wir nennen die oeffentliche Kombination aus
+    dem oeffentlichen Text id mit Standardwert "",
+    dem oeffentlichen Text titel mit Standardwert "",
+    dem oeffentlichen Text künstler mit Standardwert "",
+    dem oeffentlichen Text bild mit Standardwert "",
+    dem oeffentlichen Text playlist_id mit Standardwert "",
+ein PlaylistItem,
+und erstellen sie so:
+    "ein neues PlaylistItem"
+
+Wir nennen die oeffentliche Kombination aus
+    der oeffentlichen Zahl id mit Standardwert 0,
+    dem oeffentlichen Text playlist_id mit Standardwert "",
+eine Session,
+und erstellen sie so:
+    "eine neue Session"
+
+Wir nennen die oeffentliche Kombination aus
+    der oeffentlichen Zahl id mit Standardwert 0,
+    der oeffentlichen Zahl session_id mit Standardwert 0,
+    der oeffentlichen Zahl nummer mit Standardwert 0,
+eine Runde,
+und erstellen sie so:
+    "eine neue Runde"
+
+Wir nennen die oeffentliche Kombination aus
+    der oeffentlichen Zahl id mit Standardwert 0,
+    der oeffentlichen Zahl runden_id mit Standardwert 0,
+    dem oeffentlichen Text gewinner mit Standardwert "",
+    dem oeffentlichen Text verlierer mit Standardwert "",
+ein Match,
+und erstellen sie so:
+    "ein neues Match"
+
+Die oeffentliche Funktion Lade_Playlists gibt eine Playlist Liste zurück, macht:
+    Die Playlist Liste playlists ist eine leere Playlist Liste.
+    Solange die nächste Zeile in alle_playlists_query vorbereitet wurde, mache:
+        Die Playlist p ist eine neue Playlist.
+        Speichere den Text aus Spalte 1 im letzten Wert von alle_playlists_query in id von p.
+        Speichere den Text aus Spalte 2 im letzten Wert von alle_playlists_query in name von p.
+        Speichere den Text aus Spalte 3 im letzten Wert von alle_playlists_query in url von p.
+        Speichere playlists verkettet mit p in playlists.
+    Gib playlists zurück.
+Und kann so benutzt werden:
+    "alle Playlisten"
+
+Die oeffentliche Funktion Lade_Playlist_Items mit dem Parameter playlist_id vom Typ Text, gibt eine PlaylistItem Liste zurück, macht:
+    Die PlaylistItem Liste playlist_items ist eine leere PlaylistItem Liste.
+    Setze Parameter 1 in playlist_items_query auf playlist_id.
+    Solange die nächste Zeile in playlist_items_query vorbereitet wurde, mache:
+        Das PlaylistItem i ist ein neues PlaylistItem.
+        Speichere den Text aus Spalte 1 im letzten Wert von playlist_items_query in id von i.
+        Speichere den Text aus Spalte 2 im letzten Wert von playlist_items_query in titel von i.
+        Speichere den Text aus Spalte 3 im letzten Wert von playlist_items_query in künstler von i.
+        Speichere den Text aus Spalte 4 im letzten Wert von playlist_items_query in bild von i.
+        Speichere den Text aus Spalte 5 im letzten Wert von playlist_items_query in playlist_id von i.
+        Speichere playlist_items verkettet mit i in playlist_items.
+    Gib playlist_items zurück.
+Und kann so benutzt werden:
+    "alle PlaylistItems der Playlist mit ID <playlist_id>"
