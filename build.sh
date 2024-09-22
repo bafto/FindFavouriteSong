@@ -1,4 +1,2 @@
-set -e pipefail
-
-go generate
-go build .
+docker build -t bafto/hetzner:FindFavouriteSong .
+docker push bafto/hetzner:FindFavouriteSong
