@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/bafto/FindFavouriteSong/db"
 	"github.com/gorilla/securecookie"
@@ -17,8 +16,6 @@ import (
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
 
-var log *slog.Logger
-
 func read_config() {
 	viper.SetDefault("spotify_client_id", "")
 	viper.SetDefault("spotify_client_secret", "")
@@ -27,6 +24,9 @@ func read_config() {
 	viper.SetDefault("log_level", "INFO")
 	viper.SetDefault("redirect_url", "http://localhost:8080/spotifyauthentication")
 
+	viper.SetEnvPrefix("ffs")
+	viper.AutomaticEnv()
+
 	viper.AddConfigPath(".")
 	viper.SetConfigName("ffs_config")
 	viper.SetConfigType("yaml")
@@ -34,12 +34,9 @@ func read_config() {
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err)
 	}
-
-	viper.SetEnvPrefix("ffs")
-	viper.AutomaticEnv()
 }
 
-func configure_logger() {
+func configure_slog() {
 	var level slog.Level
 	if err := level.UnmarshalText(
 		[]byte(viper.GetString("log_level")),
@@ -54,12 +51,12 @@ func configure_logger() {
 
 	levelVar := &slog.LevelVar{}
 	levelVar.Set(level)
-	log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: addSource,
 		Level:     levelVar,
 	}))
 
-	slog.SetDefault(log)
+	slog.SetDefault(logger)
 }
 
 const (
@@ -67,6 +64,11 @@ const (
 	session_id_key = "ffs-user-id"
 	state_length   = 16
 )
+
+type ActiveUser struct {
+	db.User
+	client *spotify.Client
+}
 
 var (
 	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.html"))
@@ -81,13 +83,13 @@ var (
 
 	spotifyClient *spotify.Client
 	spotifyAuth   *spotifyauth.Authenticator
-	stateMap      = sync.Map{}
-	clientMap     = sync.Map{}
+	stateMap      = SyncMap[string, string]{}
+	activeUserMap = SyncMap[string, *ActiveUser]{}
 )
 
 func main() {
 	read_config()
-	configure_logger()
+	configure_slog()
 
 	spotifyAuth = spotifyauth.New(
 		spotifyauth.WithRedirectURL(viper.GetString("redirect_url")),
@@ -98,11 +100,11 @@ func main() {
 
 	conn, err := create_db(ctx, "ffs.db")
 	if err != nil {
-		log.Error("Error opening DB connection", "err", err)
+		slog.Error("Error opening DB connection", "err", err)
 		os.Exit(1)
 	}
 	defer conn.Close()
-	log.Info("Connected to database")
+	slog.Info("Connected to database")
 
 	queries = db.New(conn)
 
@@ -110,7 +112,7 @@ func main() {
 
 	mux.HandleFunc("/", withMiddleware(defaultHandler))
 	mux.HandleFunc("/spotifyauthentication", withMiddlewareSession(authHandler))
-	// mux.HandleFunc("/api/select_playlist", selectPlaylistHandler)
+	mux.HandleFunc("POST /api/select_playlist", withMiddlewareSession(selectPlaylistHandler))
 	// mux.HandleFunc("/api/select_song/{selected}", selectSongHandler)
 	// mux.HandleFunc("/select_song", selectSongPageHandler)
 	// mux.HandleFunc("/winner", winnerHandler)
@@ -124,14 +126,24 @@ func defaultHandler(w http.ResponseWriter, r *http.Request) {
 	selectPlaylistHtml.Execute(w, nil)
 }
 
+func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	user, ok := getActiveUser(s)
+	if !ok {
+		http.Error(w, "user not found", http.StatusInternalServerError)
+		slog.Error("user not found")
+		return
+	}
+	slog.Info("loaded user", "userID", user.ID)
+}
+
 func getIp(r *http.Request) string {
 	return strings.Split(r.RemoteAddr, ":")[0]
 }
 
-func getClient(session *sessions.Session) (*spotify.Client, bool) {
-	client, ok := clientMap.Load(session.Values[session_id_key])
+func getActiveUser(session *sessions.Session) (*ActiveUser, bool) {
+	userID, ok := session.Values[session_id_key]
 	if !ok {
 		return nil, false
 	}
-	return client.(*spotify.Client), true
+	return activeUserMap.Load(userID.(string))
 }

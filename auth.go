@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"time"
@@ -20,7 +21,7 @@ func withAuthMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFunc {
 
 			s.Save(r, w)
 			http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
-			log.Info("redirecting to login page")
+			slog.Info("redirecting to login page")
 			return
 		}
 
@@ -33,35 +34,46 @@ func authHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	state, ok := stateMap.Load(ip)
 	if !ok {
 		http.Error(w, "no state for ip present", http.StatusForbidden)
-		log.Warn("no state for ip present", "ip", ip)
+		slog.Warn("no state for ip present", "ip", ip)
 		return
 	}
 
-	tok, err := spotifyAuth.Token(r.Context(), state.(string), r)
+	tok, err := spotifyAuth.Token(r.Context(), state, r)
 	if err != nil {
 		http.Error(w, "Couldn't get token", http.StatusForbidden)
-		log.Warn("Couldn't get token", "err", err)
+		slog.Warn("Couldn't get token", "err", err)
 		return
 	}
 	if st := r.FormValue("state"); st != state {
 		http.Error(w, "state mismatch", http.StatusForbidden)
-		log.Warn("State mismatch", "got", st, "expected", state)
+		slog.Warn("State mismatch", "got", st, "expected", state)
 		return
 	}
 	stateMap.Delete(ip)
 
 	spotifyClient = spotify.New(spotifyAuth.Client(context.Background(), tok), spotify.WithRetry(true))
-	user, err := spotifyClient.CurrentUser(context.Background())
+	userData, err := spotifyClient.CurrentUser(context.Background())
 	if err != nil {
 		http.Error(w, "unable to retrieve user info", http.StatusInternalServerError)
-		log.Warn("unable to retrieve user info", "err", err)
+		slog.Warn("unable to retrieve user info", "err", err)
 		return
 	}
 
-	s.Values[session_id_key] = user.ID
-	clientMap.Store(user.ID, spotifyClient)
+	user, err := queries.GetUser(r.Context(), userData.ID)
+	if err != nil {
+		user, err = queries.AddUser(r.Context(), userData.ID)
+		if err != nil {
+			http.Error(w, "unable to load user info from db", http.StatusInternalServerError)
+			slog.Error("unable to load user info from db", "err", err)
+			return
+		}
+	}
 
-	log.Info("Login completed", "ip", ip)
+	s.Values[session_id_key] = user.ID
+	activeUserMap.Store(userData.ID, &ActiveUser{client: spotifyClient, User: user})
+
+	s.Save(r, w)
+	slog.Info("Login completed", "ip", ip)
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 

@@ -9,19 +9,38 @@ import (
 	"context"
 )
 
+const addUser = `-- name: AddUser :one
+INSERT OR IGNORE INTO user (id, current_session) VALUES (?, NULL)
+RETURNING id, current_session
+`
+
+func (q *Queries) AddUser(ctx context.Context, id string) (User, error) {
+	row := q.db.QueryRowContext(ctx, addUser, id)
+	var i User
+	err := row.Scan(&i.ID, &i.CurrentSession)
+	return i, err
+}
+
 const getPlaylist = `-- name: GetPlaylist :one
-SELECT id, spotify_id, name, url FROM playlist
+SELECT id, name, url FROM playlist
 WHERE id = ? LIMIT 1
 `
 
-func (q *Queries) GetPlaylist(ctx context.Context, id int64) (Playlist, error) {
+func (q *Queries) GetPlaylist(ctx context.Context, id string) (Playlist, error) {
 	row := q.db.QueryRowContext(ctx, getPlaylist, id)
 	var i Playlist
-	err := row.Scan(
-		&i.ID,
-		&i.SpotifyID,
-		&i.Name,
-		&i.Url,
-	)
+	err := row.Scan(&i.ID, &i.Name, &i.Url)
+	return i, err
+}
+
+const getUser = `-- name: GetUser :one
+SELECT id, current_session FROM user
+WHERE id = ? LIMIT 1
+`
+
+func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUser, id)
+	var i User
+	err := row.Scan(&i.ID, &i.CurrentSession)
 	return i, err
 }
