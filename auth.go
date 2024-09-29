@@ -56,6 +56,14 @@ func authHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		return
 	}
 
+	tx, err := db_conn.BeginTx(r.Context(), nil)
+	if err != nil {
+		logAndErr(w, logger, "failed to create DB transaction", http.StatusInternalServerError, "err", err)
+		return
+	}
+	defer tx.Rollback()
+	queries := queries.WithTx(tx)
+
 	user, err := queries.GetUser(r.Context(), userData.ID)
 	if err != nil {
 		user, err = queries.AddUser(r.Context(), userData.ID)
@@ -63,6 +71,11 @@ func authHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 			logAndErr(w, logger, "unable to load user info from db", http.StatusInternalServerError, "err", err)
 			return
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
+		return
 	}
 
 	s.Values[session_id_key] = user.ID

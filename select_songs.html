@@ -12,12 +12,15 @@
 <body>
 	<h1>Select the song you like more</h1>
 	<div id="form">
-		<button hx-get="/api/select_song/1" hx-target="#form" hx-swap="innerHTML">
+		<!--- has to be kept in sync with select_songs_api_return.html --->
+		<button hx-get="/api/select_song?winner={{ .Song1_ID }}&loser={{ .Song2_ID }}" hx-target="#form"
+			hx-swap="innerHTML">
 			<img src="{{ .Song1_Image }}" />
 			<h3>{{ .Song1 }}</h3>
 			<h4>{{ .Song1_Artists }}</h4>
 		</button>
-		<button hx-get="/api/select_song/2" hx-target="#form" hx-swap="innerHTML">
+		<button hx-get="/api/select_song?winner={{ .Song2_ID }}&loser={{ .Song1_ID }}" hx-target="#form"
+			hx-swap="innerHTML">
 			<img src="{{ .Song2_Image }}" />
 			<h3>{{ .Song2 }}</h3>
 			<h4>{{ .Song2_Artists }}</h4>

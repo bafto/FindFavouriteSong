@@ -12,7 +12,7 @@ func withPanicMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				slog.Error("panic recovered in handler", "err", err)
+				slog.Error("panic recovered in handler", "err", err, "url", r.URL)
 			}
 		}()
 		nextHandler(w, r)

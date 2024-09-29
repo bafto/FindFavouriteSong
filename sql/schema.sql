@@ -1,3 +1,5 @@
+PRAGMA user_version = 1;
+
 CREATE TABLE IF NOT EXISTS playlist (
 	id varchar(22) NOT NULL PRIMARY KEY, -- spotify id
 	name varchar(128),
@@ -17,15 +19,10 @@ CREATE TABLE IF NOT EXISTS session (
 	playlist varchar(22) NOT NULL REFERENCES playlist
 );
 
-CREATE TABLE IF NOT EXISTS round (
-	id INTEGER PRIMARY KEY,
-	session INTEGER NOT NULL REFERENCES session,
-	number INTEGER NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS match (
 	id INTEGER PRIMARY KEY,
-	round INTEGER NOT NULL REFERENCES round,
+	session INTEGER NOT NULL,
+	round_number INTEGER NOT NULL,
 	winner varchar(22) NOT NULL REFERENCES playlist_item,
 	loser varchar(22) NOT NULL REFERENCES playlist_item
 );

@@ -27,3 +27,22 @@ WHERE user.id = ?;
 INSERT INTO session
 (id, playlist) VALUES (NULL, ?)
 RETURNING session.id;
+
+-- name: GetCurrentRound :one
+SELECT COALESCE(max(round_number), 0) FROM match
+WHERE session = ?
+ORDER BY round_number DESC
+LIMIT 1;
+
+-- name: GetNextPair :many
+WITH already_lost AS (
+	SELECT loser FROM match
+	WHERE session = ?
+)
+SELECT * FROM playlist_item
+WHERE id NOT IN already_lost
+ORDER BY RANDOM() DESC LIMIT 2;
+
+-- name: AddMatch :exec
+INSERT INTO match
+(id, session, round_number, winner, loser) VALUES (NULL, ?, ?, ?, ?)

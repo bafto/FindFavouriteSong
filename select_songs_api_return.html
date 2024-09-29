@@ -1,0 +1,11 @@
+<!--- has to be kept in sync with select_songs.html --->
+<button hx-get="/api/select_song?winner={{ .Song1_ID }}&loser={{ .Song2_ID }}" hx-target="#form" hx-swap="innerHTML">
+	<img src="{{ .Song1_Image }}" />
+	<h3>{{ .Song1 }}</h3>
+	<h4>{{ .Song1_Artists }}</h4>
+</button>
+<button hx-get="/api/select_song?winner={{ .Song2_ID }}&loser={{ .Song1_ID }}" hx-target="#form" hx-swap="innerHTML">
+	<img src="{{ .Song2_Image }}" />
+	<h3>{{ .Song2 }}</h3>
+	<h4>{{ .Song2_Artists }}</h4>
+</button>

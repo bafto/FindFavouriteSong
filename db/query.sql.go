@@ -10,6 +10,28 @@ import (
 	"database/sql"
 )
 
+const addMatch = `-- name: AddMatch :exec
+INSERT INTO match
+(id, session, round_number, winner, loser) VALUES (NULL, ?, ?, ?, ?)
+`
+
+type AddMatchParams struct {
+	Session     int64
+	RoundNumber int64
+	Winner      string
+	Loser       string
+}
+
+func (q *Queries) AddMatch(ctx context.Context, arg AddMatchParams) error {
+	_, err := q.db.ExecContext(ctx, addMatch,
+		arg.Session,
+		arg.RoundNumber,
+		arg.Winner,
+		arg.Loser,
+	)
+	return err
+}
+
 const addOrUpdatePlaylist = `-- name: AddOrUpdatePlaylist :exec
 INSERT OR REPLACE INTO playlist
 (id, name, url) VALUES (?, ?, ?)
@@ -73,6 +95,59 @@ func (q *Queries) AddUser(ctx context.Context, id string) (User, error) {
 	var i User
 	err := row.Scan(&i.ID, &i.CurrentSession)
 	return i, err
+}
+
+const getCurrentRound = `-- name: GetCurrentRound :one
+SELECT COALESCE(max(round_number), 0) FROM match
+WHERE session = ?
+ORDER BY round_number DESC
+LIMIT 1
+`
+
+func (q *Queries) GetCurrentRound(ctx context.Context, session int64) (interface{}, error) {
+	row := q.db.QueryRowContext(ctx, getCurrentRound, session)
+	var coalesce interface{}
+	err := row.Scan(&coalesce)
+	return coalesce, err
+}
+
+const getNextPair = `-- name: GetNextPair :many
+WITH already_lost AS (
+	SELECT loser FROM match
+	WHERE session = ?
+)
+SELECT id, title, artists, image, playlist FROM playlist_item
+WHERE id NOT IN already_lost
+ORDER BY RANDOM() DESC LIMIT 2
+`
+
+func (q *Queries) GetNextPair(ctx context.Context, session int64) ([]PlaylistItem, error) {
+	rows, err := q.db.QueryContext(ctx, getNextPair, session)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PlaylistItem
+	for rows.Next() {
+		var i PlaylistItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Artists,
+			&i.Image,
+			&i.Playlist,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getPlaylist = `-- name: GetPlaylist :one
