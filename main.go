@@ -74,6 +74,7 @@ type ActiveUser struct {
 var (
 	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.html"))
 	selectPlaylistHtml = template.Must(template.ParseFiles("select_playlist.html"))
+	winnerHtml         = template.Must(template.ParseFiles("winner.html"))
 
 	ctx     = context.Background()
 	db_conn *sql.DB
@@ -117,8 +118,7 @@ func main() {
 	mux.HandleFunc("/spotifyauthentication", withMiddlewareSession(authHandler))
 	mux.HandleFunc("POST /api/select_playlist", withMiddlewareSession(selectPlaylistHandler))
 	mux.HandleFunc("/select_song", withMiddlewareSession(selectSongHandler))
-	// mux.HandleFunc("/winner", winnerHandler)
-	// mux.HandleFunc("/save", saveHandler)
+	mux.HandleFunc("/winner", withMiddlewareSession(winnerHandler))
 
 	server := &http.Server{Addr: ":" + viper.GetString("port"), Handler: mux}
 	slog.Error("Server exited", "err", server.ListenAndServe())
@@ -134,7 +134,7 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 	}
 
 	if !user.CurrentSession.Valid {
-		logger.Info("user has no active session")
+		logger.Info("user has no active session, displaying select_playlist.html")
 		selectPlaylistHtml.Execute(w, nil)
 		return
 	}
@@ -143,6 +143,46 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
 }
 
+func winnerHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	logger, user, tx, queries, ok := getLoggerUserTransactionQueries(w, r, s)
+	if !ok {
+		return
+	}
+	defer tx.Rollback()
+
+	winnerID := r.FormValue("winner")
+	if winnerID == "" {
+		logAndErr(w, logger, "no winner provided", http.StatusBadRequest)
+		return
+	}
+
+	winnerItem, err := queries.GetPlaylistItem(r.Context(), winnerID)
+	if err != nil {
+		logAndErr(w, logger, "winner not found in DB", http.StatusBadRequest, "err", err)
+		return
+	}
+
+	if err := queries.SetUserSession(r.Context(), db.SetUserSessionParams{
+		ID:             user.ID,
+		CurrentSession: sql.NullInt64{Valid: false},
+	}); err != nil {
+		logAndErr(w, logger, "unable to reset current session in DB", http.StatusBadRequest, "err", err)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
+		return
+	}
+	user.CurrentSession.Valid = false
+	logger.Info("reset user session to NULL")
+
+	winnerHtml.Execute(w, map[string]string{
+		"Image":   winnerItem.Image.String,
+		"Title":   winnerItem.Title.String,
+		"Artists": winnerItem.Artists.String,
+	})
+}
 
 func getIp(r *http.Request) string {
 	return strings.Split(r.RemoteAddr, ":")[0]
@@ -164,7 +204,7 @@ func getLoggerUserTransactionQueries(w http.ResponseWriter, r *http.Request, s *
 		logAndErr(w, logger, "no user found", http.StatusInternalServerError)
 		return logger, nil, nil, nil, false
 	}
-	
+
 	tx, err := db_conn.BeginTx(r.Context(), nil)
 	if err != nil {
 		logAndErr(w, logger, "failed to create DB transaction", http.StatusInternalServerError, "err", err)
@@ -177,7 +217,6 @@ func getLoggerUserTransactionQueries(w http.ResponseWriter, r *http.Request, s *
 func notNull(s string) sql.NullString {
 	return sql.NullString{String: s, Valid: true}
 }
-
 
 func logAndErr(w http.ResponseWriter, logger *slog.Logger, msg string, status int, args ...any) {
 	logger.Error(msg, args...)

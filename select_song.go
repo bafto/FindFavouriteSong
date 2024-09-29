@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/bafto/FindFavouriteSong/db"
@@ -30,7 +29,7 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 
 		if err := queries.AddMatch(r.Context(), db.AddMatchParams{
 			Session:     sessionID,
-			RoundNumber: currentRound.(int64),
+			RoundNumber: currentRound,
 			Winner:      winnerID,
 			Loser:       loserID,
 		}); err != nil {
@@ -42,14 +41,44 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 
 	nextPair, err := queries.GetNextPair(r.Context(), db.GetNextPairParams{
 		Session:     sessionID,
-		RoundNumber: currentRound.(int64),
+		RoundNumber: currentRound,
 	})
 	if err != nil {
 		logAndErr(w, logger, "error getting next pair from DB", http.StatusInternalServerError, "err", err)
 		return
 	}
+	// default case is 2 where we don't have to do anything
 	if len(nextPair) != 2 {
-		panic(fmt.Sprintf("not yet implemented for len %d", len(nextPair)))
+		currentRound++
+		if err := queries.SetCurrentRound(r.Context(), db.SetCurrentRoundParams{
+			ID:           sessionID,
+			CurrentRound: currentRound,
+		}); err != nil {
+			logAndErr(w, logger, "error updating current_round in DB", http.StatusInternalServerError, "err", err)
+			return
+		}
+
+		nextPair, err = queries.GetNextPair(r.Context(), db.GetNextPairParams{
+			Session:     sessionID,
+			RoundNumber: currentRound,
+		})
+		if err != nil {
+			logAndErr(w, logger, "error getting next pair from DB", http.StatusInternalServerError, "err", err)
+			return
+		}
+
+		switch len(nextPair) {
+		case 0:
+			panic("unexpected pair length 0")
+		case 1:
+			logger.Info("found winner for session, redirecting to /winner", "winner", nextPair[0].ID)
+			if err := tx.Commit(); err != nil {
+				logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
+				return
+			}
+			http.Redirect(w, r, "/winner?winner="+nextPair[0].ID, http.StatusTemporaryRedirect)
+			return
+		}
 	}
 
 	if err := tx.Commit(); err != nil {

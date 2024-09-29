@@ -6,6 +6,10 @@ WHERE id = ? LIMIT 1;
 INSERT OR REPLACE INTO playlist
 (id, name, url) VALUES (?, ?, ?);
 
+-- name: GetPlaylistItem :one
+SELECT * FROM playlist_item
+WHERE id = ?;
+
 -- name: AddOrUpdatePlaylistItem :exec
 INSERT OR REPLACE INTO playlist_item
 (id, title, artists, image, playlist) VALUES (?, ?, ?, ?, ?);
@@ -21,18 +25,21 @@ WHERE id = ? LIMIT 1;
 -- name: SetUserSession :exec
 UPDATE user
 SET current_session = ?
-WHERE user.id = ?;
+WHERE id = ?;
 
 -- name: AddSession :one
 INSERT INTO session
-(id, playlist) VALUES (NULL, ?)
+(id, playlist, current_round) VALUES (NULL, ?, 0)
 RETURNING session.id;
 
 -- name: GetCurrentRound :one
-SELECT COALESCE(max(round_number), 0) FROM match
-WHERE session = ?
-ORDER BY round_number DESC
-LIMIT 1;
+SELECT current_round FROM session
+WHERE id = ?;
+
+-- name: SetCurrentRound :exec
+UPDATE session
+SET current_round = ?
+WHERE id = ?;
 
 -- name: GetNextPair :many
 WITH already_lost_this_session AS (

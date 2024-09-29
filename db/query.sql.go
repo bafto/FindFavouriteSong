@@ -74,7 +74,7 @@ func (q *Queries) AddOrUpdatePlaylistItem(ctx context.Context, arg AddOrUpdatePl
 
 const addSession = `-- name: AddSession :one
 INSERT INTO session
-(id, playlist) VALUES (NULL, ?)
+(id, playlist, current_round) VALUES (NULL, ?, 0)
 RETURNING session.id
 `
 
@@ -98,17 +98,15 @@ func (q *Queries) AddUser(ctx context.Context, id string) (User, error) {
 }
 
 const getCurrentRound = `-- name: GetCurrentRound :one
-SELECT COALESCE(max(round_number), 0) FROM match
-WHERE session = ?
-ORDER BY round_number DESC
-LIMIT 1
+SELECT current_round FROM session
+WHERE id = ?
 `
 
-func (q *Queries) GetCurrentRound(ctx context.Context, session int64) (interface{}, error) {
-	row := q.db.QueryRowContext(ctx, getCurrentRound, session)
-	var coalesce interface{}
-	err := row.Scan(&coalesce)
-	return coalesce, err
+func (q *Queries) GetCurrentRound(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getCurrentRound, id)
+	var current_round int64
+	err := row.Scan(&current_round)
+	return current_round, err
 }
 
 const getNextPair = `-- name: GetNextPair :many
@@ -171,6 +169,24 @@ func (q *Queries) GetPlaylist(ctx context.Context, id string) (Playlist, error) 
 	return i, err
 }
 
+const getPlaylistItem = `-- name: GetPlaylistItem :one
+SELECT id, title, artists, image, playlist FROM playlist_item
+WHERE id = ?
+`
+
+func (q *Queries) GetPlaylistItem(ctx context.Context, id string) (PlaylistItem, error) {
+	row := q.db.QueryRowContext(ctx, getPlaylistItem, id)
+	var i PlaylistItem
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Artists,
+		&i.Image,
+		&i.Playlist,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT id, current_session FROM user
 WHERE id = ? LIMIT 1
@@ -183,10 +199,26 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 	return i, err
 }
 
+const setCurrentRound = `-- name: SetCurrentRound :exec
+UPDATE session
+SET current_round = ?
+WHERE id = ?
+`
+
+type SetCurrentRoundParams struct {
+	CurrentRound int64
+	ID           int64
+}
+
+func (q *Queries) SetCurrentRound(ctx context.Context, arg SetCurrentRoundParams) error {
+	_, err := q.db.ExecContext(ctx, setCurrentRound, arg.CurrentRound, arg.ID)
+	return err
+}
+
 const setUserSession = `-- name: SetUserSession :exec
 UPDATE user
 SET current_session = ?
-WHERE user.id = ?
+WHERE id = ?
 `
 
 type SetUserSessionParams struct {
