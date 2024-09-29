@@ -114,11 +114,11 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", withMiddlewareSession(defaultHandler))
-	mux.HandleFunc("/spotifyauthentication", withMiddlewareSession(authHandler))
-	mux.HandleFunc("POST /api/select_playlist", withMiddlewareSession(selectPlaylistHandler))
-	mux.HandleFunc("/select_song", withMiddlewareSession(selectSongHandler))
-	mux.HandleFunc("/winner", withMiddlewareSession(winnerHandler))
+	mux.HandleFunc("/", withMiddleware(defaultHandler))
+	mux.HandleFunc("/spotifyauthentication", withMiddleware(authHandler))
+	mux.HandleFunc("POST /api/select_playlist", withMiddleware(selectPlaylistHandler))
+	mux.HandleFunc("/select_song", withMiddleware(selectSongHandler))
+	mux.HandleFunc("/winner", withMiddleware(winnerHandler))
 
 	server := &http.Server{Addr: ":" + viper.GetString("port"), Handler: mux}
 	slog.Error("Server exited", "err", server.ListenAndServe())

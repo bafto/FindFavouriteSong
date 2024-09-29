@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/sessions"
 )
@@ -65,23 +66,25 @@ func withSessionMiddleware(nextHandler SessionHandlerFunc) http.HandlerFunc {
 	}
 }
 
-func withMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
-	return withPanicMiddleware(
-		withLoggingMiddleware(
-			withSessionMiddleware(
-				withAuthMiddleware(func(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-					nextHandler(w, r)
-				}),
-			),
-		),
-	)
+func withTimerMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+		defer func(start time.Time) {
+			logger := getLogger(r)
+			logger.Debug("request done", "took", time.Since(start))
+		}(time.Now())
+		nextHandler(w, r, s)
+	}
 }
 
-func withMiddlewareSession(nextHandler SessionHandlerFunc) http.HandlerFunc {
+func withMiddleware(nextHandler SessionHandlerFunc) http.HandlerFunc {
 	return withPanicMiddleware(
 		withLoggingMiddleware(
 			withSessionMiddleware(
-				withAuthMiddleware(nextHandler),
+				withAuthMiddleware(
+					withTimerMiddleware(
+						nextHandler,
+					),
+				),
 			),
 		),
 	)
