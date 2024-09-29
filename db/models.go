@@ -26,7 +26,7 @@ type PlaylistItem struct {
 	Title    sql.NullString
 	Artists  sql.NullString
 	Image    sql.NullString
-	Playlist int64
+	Playlist string
 }
 
 type Round struct {

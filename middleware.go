@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 
@@ -18,10 +19,29 @@ func withPanicMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+type loggerkey struct{}
+
+func getLogger(r *http.Request, args ...any) *slog.Logger {
+	logger := r.Context().Value(loggerkey{})
+	if logger, ok := logger.(*slog.Logger); !ok {
+		return slog.Default().With(args...)
+	} else {
+		return logger.With(args...)
+	}
+}
+
+func withLogger(r *http.Request, logger *slog.Logger) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), loggerkey{}, logger))
+}
+
 func withLoggingMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		slog.Debug("Got a request", "URL", r.URL, "IP", getIp(r))
-		nextHandler(w, r)
+		logger := slog.Default().With(
+			"ip", getIp(r),
+		)
+
+		logger.Debug("Got a request", "url", r.URL)
+		nextHandler(w, withLogger(r, logger))
 	}
 }
 
@@ -29,12 +49,18 @@ type SessionHandlerFunc func(http.ResponseWriter, *http.Request, *sessions.Sessi
 
 func withSessionMiddleware(nextHandler SessionHandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		logger := getLogger(r)
+
 		session, err := sessionManager.Get(r, session_cookie)
 		if err != nil && !session.IsNew {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			slog.Error("Could not decode session", "err", err)
+			logAndErr(w, getLogger(r), "Could not decode session", http.StatusInternalServerError, "err", err)
 			return
 		}
+
+		if user, ok := getActiveUser(session); ok {
+			r = withLogger(r, logger.With("user-id", user.ID))
+		}
+
 		nextHandler(w, r, session)
 	}
 }

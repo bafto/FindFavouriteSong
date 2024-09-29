@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"math/rand"
 	"net/http"
 	"time"
@@ -21,7 +20,7 @@ func withAuthMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFunc {
 
 			s.Save(r, w)
 			http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
-			slog.Info("redirecting to login page")
+			getLogger(r).Info("redirecting to login page")
 			return
 		}
 
@@ -30,23 +29,22 @@ func withAuthMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFunc {
 }
 
 func authHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	logger := getLogger(r)
+
 	ip := getIp(r)
 	state, ok := stateMap.Load(ip)
 	if !ok {
-		http.Error(w, "no state for ip present", http.StatusForbidden)
-		slog.Warn("no state for ip present", "ip", ip)
+		logAndErr(w, logger, "no state for ip present", http.StatusForbidden, "ip", ip)
 		return
 	}
 
 	tok, err := spotifyAuth.Token(r.Context(), state, r)
 	if err != nil {
-		http.Error(w, "Couldn't get token", http.StatusForbidden)
-		slog.Warn("Couldn't get token", "err", err)
+		logAndErr(w, logger, "Couldn't get token", http.StatusForbidden, "err", err)
 		return
 	}
 	if st := r.FormValue("state"); st != state {
-		http.Error(w, "state mismatch", http.StatusForbidden)
-		slog.Warn("State mismatch", "got", st, "expected", state)
+		logAndErr(w, logger, "state mismatch", http.StatusForbidden, "expected", state, "got", st)
 		return
 	}
 	stateMap.Delete(ip)
@@ -54,8 +52,7 @@ func authHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	spotifyClient = spotify.New(spotifyAuth.Client(context.Background(), tok), spotify.WithRetry(true))
 	userData, err := spotifyClient.CurrentUser(context.Background())
 	if err != nil {
-		http.Error(w, "unable to retrieve user info", http.StatusInternalServerError)
-		slog.Warn("unable to retrieve user info", "err", err)
+		logAndErr(w, logger, "unable to retrieve user info", http.StatusInternalServerError, "err", err)
 		return
 	}
 
@@ -63,8 +60,7 @@ func authHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	if err != nil {
 		user, err = queries.AddUser(r.Context(), userData.ID)
 		if err != nil {
-			http.Error(w, "unable to load user info from db", http.StatusInternalServerError)
-			slog.Error("unable to load user info from db", "err", err)
+			logAndErr(w, logger, "unable to load user info from db", http.StatusInternalServerError, "err", err)
 			return
 		}
 	}
@@ -73,7 +69,7 @@ func authHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 	activeUserMap.Store(userData.ID, &ActiveUser{client: spotifyClient, User: user})
 
 	s.Save(r, w)
-	slog.Info("Login completed", "ip", ip)
+	logger.Info("Login completed")
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 

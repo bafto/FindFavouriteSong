@@ -7,7 +7,61 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
+
+const addOrUpdatePlaylist = `-- name: AddOrUpdatePlaylist :exec
+INSERT OR REPLACE INTO playlist
+(id, name, url) VALUES (?, ?, ?)
+`
+
+type AddOrUpdatePlaylistParams struct {
+	ID   string
+	Name sql.NullString
+	Url  sql.NullString
+}
+
+func (q *Queries) AddOrUpdatePlaylist(ctx context.Context, arg AddOrUpdatePlaylistParams) error {
+	_, err := q.db.ExecContext(ctx, addOrUpdatePlaylist, arg.ID, arg.Name, arg.Url)
+	return err
+}
+
+const addOrUpdatePlaylistItem = `-- name: AddOrUpdatePlaylistItem :exec
+INSERT OR REPLACE INTO playlist_item
+(id, title, artists, image, playlist) VALUES (?, ?, ?, ?, ?)
+`
+
+type AddOrUpdatePlaylistItemParams struct {
+	ID       string
+	Title    sql.NullString
+	Artists  sql.NullString
+	Image    sql.NullString
+	Playlist string
+}
+
+func (q *Queries) AddOrUpdatePlaylistItem(ctx context.Context, arg AddOrUpdatePlaylistItemParams) error {
+	_, err := q.db.ExecContext(ctx, addOrUpdatePlaylistItem,
+		arg.ID,
+		arg.Title,
+		arg.Artists,
+		arg.Image,
+		arg.Playlist,
+	)
+	return err
+}
+
+const addSession = `-- name: AddSession :one
+INSERT INTO session
+(id, playlist) VALUES (NULL, ?)
+RETURNING session.id
+`
+
+func (q *Queries) AddSession(ctx context.Context, playlist string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, addSession, playlist)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
 
 const addUser = `-- name: AddUser :one
 INSERT OR IGNORE INTO user (id, current_session) VALUES (?, NULL)
@@ -43,4 +97,20 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 	var i User
 	err := row.Scan(&i.ID, &i.CurrentSession)
 	return i, err
+}
+
+const setUserSession = `-- name: SetUserSession :exec
+UPDATE user
+SET current_session = ?
+WHERE user.id = ?
+`
+
+type SetUserSessionParams struct {
+	CurrentSession sql.NullInt64
+	ID             string
+}
+
+func (q *Queries) SetUserSession(ctx context.Context, arg SetUserSessionParams) error {
+	_, err := q.db.ExecContext(ctx, setUserSession, arg.CurrentSession, arg.ID)
+	return err
 }
