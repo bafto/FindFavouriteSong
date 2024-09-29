@@ -18,7 +18,17 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		return
 	}
 	sessionID := user.CurrentSession.Int64
-	nextPair, err := queries.GetNextPair(r.Context(), sessionID)
+
+	roundNumber, err := queries.GetCurrentRound(r.Context(), sessionID)
+	if err != nil {
+		logAndErr(w, logger, "could not determine current round number from DB", http.StatusInternalServerError, "err", err)
+		return
+	}
+
+	nextPair, err := queries.GetNextPair(r.Context(), db.GetNextPairParams{
+		Session:     sessionID,
+		RoundNumber: roundNumber.(int64),
+	})
 	if err != nil {
 		logAndErr(w, logger, "error getting next pair from DB", http.StatusInternalServerError, "err", err)
 		return
@@ -70,7 +80,10 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 		return
 	}
 
-	nextPair, err := queries.GetNextPair(r.Context(), sessionID)
+	nextPair, err := queries.GetNextPair(r.Context(), db.GetNextPairParams{
+		Session:     sessionID,
+		RoundNumber: currentRound.(int64),
+	})
 	if err != nil {
 		logAndErr(w, logger, "error getting next pair from DB", http.StatusInternalServerError, "err", err)
 		return

@@ -112,17 +112,26 @@ func (q *Queries) GetCurrentRound(ctx context.Context, session int64) (interface
 }
 
 const getNextPair = `-- name: GetNextPair :many
-WITH already_lost AS (
-	SELECT loser FROM match
-	WHERE session = ?
+WITH already_lost_this_session AS (
+	SELECT m.loser FROM match m
+	WHERE m.session = ?1
+),
+already_won_this_round AS (
+	SELECT m.winner FROM match m
+	WHERE m.session = ?1 AND m.round_number = ?2
 )
 SELECT id, title, artists, image, playlist FROM playlist_item
-WHERE id NOT IN already_lost
+WHERE id NOT IN already_lost_this_session AND id NOT IN already_won_this_round
 ORDER BY RANDOM() DESC LIMIT 2
 `
 
-func (q *Queries) GetNextPair(ctx context.Context, session int64) ([]PlaylistItem, error) {
-	rows, err := q.db.QueryContext(ctx, getNextPair, session)
+type GetNextPairParams struct {
+	Session     int64
+	RoundNumber int64
+}
+
+func (q *Queries) GetNextPair(ctx context.Context, arg GetNextPairParams) ([]PlaylistItem, error) {
+	rows, err := q.db.QueryContext(ctx, getNextPair, arg.Session, arg.RoundNumber)
 	if err != nil {
 		return nil, err
 	}
