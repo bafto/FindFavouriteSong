@@ -3,9 +3,11 @@
 
 <head>
 	<title>Find Favourite Song</title>
-	<script src="https://unpkg.com/htmx.org@1.9.11"
-		integrity="sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0"
-		crossorigin="anonymous"></script>
+	<script>
+		function select_song(winner, loser) {
+			window.location.href = `/select_song?winner=${winner}&loser=${loser}`
+		}
+	</script>
 </head>
 
 
@@ -13,14 +15,12 @@
 	<h1>Select the song you like more</h1>
 	<div id="form">
 		<!--- has to be kept in sync with select_songs_api_return.html --->
-		<button hx-get="/api/select_song?winner={{ .Song1_ID }}&loser={{ .Song2_ID }}" hx-target="#form"
-			hx-swap="innerHTML">
+		<button onclick="select_song({{ .Song1_ID }}, {{ .Song2_ID }})">
 			<img src="{{ .Song1_Image }}" />
 			<h3>{{ .Song1 }}</h3>
 			<h4>{{ .Song1_Artists }}</h4>
 		</button>
-		<button hx-get="/api/select_song?winner={{ .Song2_ID }}&loser={{ .Song1_ID }}" hx-target="#form"
-			hx-swap="innerHTML">
+		<button onclick="select_song({{ .Song2_ID }}, {{ .Song1_ID }})">
 			<img src="{{ .Song2_Image }}" />
 			<h3>{{ .Song2 }}</h3>
 			<h4>{{ .Song2_Artists }}</h4>

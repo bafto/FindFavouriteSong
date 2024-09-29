@@ -73,7 +73,6 @@ type ActiveUser struct {
 
 var (
 	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.html"))
-	selectSongsApiReturnHtml = template.Must(template.ParseFiles("select_songs_api_return.html"))
 	selectPlaylistHtml = template.Must(template.ParseFiles("select_playlist.html"))
 
 	ctx     = context.Background()
@@ -117,8 +116,7 @@ func main() {
 	mux.HandleFunc("/", withMiddlewareSession(defaultHandler))
 	mux.HandleFunc("/spotifyauthentication", withMiddlewareSession(authHandler))
 	mux.HandleFunc("POST /api/select_playlist", withMiddlewareSession(selectPlaylistHandler))
-	mux.HandleFunc("/api/select_song", withMiddlewareSession(selectSongHandler))
-	mux.HandleFunc("/select_song", withMiddlewareSession(selectSongPageHandler))
+	mux.HandleFunc("/select_song", withMiddlewareSession(selectSongHandler))
 	// mux.HandleFunc("/winner", winnerHandler)
 	// mux.HandleFunc("/save", saveHandler)
 
