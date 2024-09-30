@@ -23,7 +23,7 @@ type AddMatchParams struct {
 }
 
 func (q *Queries) AddMatch(ctx context.Context, arg AddMatchParams) error {
-	_, err := q.db.ExecContext(ctx, addMatch,
+	_, err := q.exec(ctx, q.addMatchStmt, addMatch,
 		arg.Session,
 		arg.RoundNumber,
 		arg.Winner,
@@ -44,7 +44,7 @@ type AddOrUpdatePlaylistParams struct {
 }
 
 func (q *Queries) AddOrUpdatePlaylist(ctx context.Context, arg AddOrUpdatePlaylistParams) error {
-	_, err := q.db.ExecContext(ctx, addOrUpdatePlaylist, arg.ID, arg.Name, arg.Url)
+	_, err := q.exec(ctx, q.addOrUpdatePlaylistStmt, addOrUpdatePlaylist, arg.ID, arg.Name, arg.Url)
 	return err
 }
 
@@ -62,7 +62,7 @@ type AddOrUpdatePlaylistItemParams struct {
 }
 
 func (q *Queries) AddOrUpdatePlaylistItem(ctx context.Context, arg AddOrUpdatePlaylistItemParams) error {
-	_, err := q.db.ExecContext(ctx, addOrUpdatePlaylistItem,
+	_, err := q.exec(ctx, q.addOrUpdatePlaylistItemStmt, addOrUpdatePlaylistItem,
 		arg.ID,
 		arg.Title,
 		arg.Artists,
@@ -79,7 +79,7 @@ RETURNING session.id
 `
 
 func (q *Queries) AddSession(ctx context.Context, playlist string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, addSession, playlist)
+	row := q.queryRow(ctx, q.addSessionStmt, addSession, playlist)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -91,7 +91,7 @@ RETURNING id, current_session
 `
 
 func (q *Queries) AddUser(ctx context.Context, id string) (User, error) {
-	row := q.db.QueryRowContext(ctx, addUser, id)
+	row := q.queryRow(ctx, q.addUserStmt, addUser, id)
 	var i User
 	err := row.Scan(&i.ID, &i.CurrentSession)
 	return i, err
@@ -103,7 +103,7 @@ WHERE id = ?
 `
 
 func (q *Queries) GetCurrentRound(ctx context.Context, id int64) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getCurrentRound, id)
+	row := q.queryRow(ctx, q.getCurrentRoundStmt, getCurrentRound, id)
 	var current_round int64
 	err := row.Scan(&current_round)
 	return current_round, err
@@ -129,7 +129,7 @@ type GetNextPairParams struct {
 }
 
 func (q *Queries) GetNextPair(ctx context.Context, arg GetNextPairParams) ([]PlaylistItem, error) {
-	rows, err := q.db.QueryContext(ctx, getNextPair, arg.Session, arg.RoundNumber)
+	rows, err := q.query(ctx, q.getNextPairStmt, getNextPair, arg.Session, arg.RoundNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ WHERE id = ? LIMIT 1
 `
 
 func (q *Queries) GetPlaylist(ctx context.Context, id string) (Playlist, error) {
-	row := q.db.QueryRowContext(ctx, getPlaylist, id)
+	row := q.queryRow(ctx, q.getPlaylistStmt, getPlaylist, id)
 	var i Playlist
 	err := row.Scan(&i.ID, &i.Name, &i.Url)
 	return i, err
@@ -175,7 +175,7 @@ WHERE id = ?
 `
 
 func (q *Queries) GetPlaylistItem(ctx context.Context, id string) (PlaylistItem, error) {
-	row := q.db.QueryRowContext(ctx, getPlaylistItem, id)
+	row := q.queryRow(ctx, q.getPlaylistItemStmt, getPlaylistItem, id)
 	var i PlaylistItem
 	err := row.Scan(
 		&i.ID,
@@ -193,7 +193,7 @@ WHERE id = ? LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUser, id)
+	row := q.queryRow(ctx, q.getUserStmt, getUser, id)
 	var i User
 	err := row.Scan(&i.ID, &i.CurrentSession)
 	return i, err
@@ -211,7 +211,7 @@ type SetCurrentRoundParams struct {
 }
 
 func (q *Queries) SetCurrentRound(ctx context.Context, arg SetCurrentRoundParams) error {
-	_, err := q.db.ExecContext(ctx, setCurrentRound, arg.CurrentRound, arg.ID)
+	_, err := q.exec(ctx, q.setCurrentRoundStmt, setCurrentRound, arg.CurrentRound, arg.ID)
 	return err
 }
 
@@ -227,6 +227,6 @@ type SetUserSessionParams struct {
 }
 
 func (q *Queries) SetUserSession(ctx context.Context, arg SetUserSessionParams) error {
-	_, err := q.db.ExecContext(ctx, setUserSession, arg.CurrentSession, arg.ID)
+	_, err := q.exec(ctx, q.setUserSessionStmt, setUserSession, arg.CurrentSession, arg.ID)
 	return err
 }

@@ -7,6 +7,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type DBTX interface {
@@ -20,12 +21,178 @@ func New(db DBTX) *Queries {
 	return &Queries{db: db}
 }
 
+func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
+	q := Queries{db: db}
+	var err error
+	if q.addMatchStmt, err = db.PrepareContext(ctx, addMatch); err != nil {
+		return nil, fmt.Errorf("error preparing query AddMatch: %w", err)
+	}
+	if q.addOrUpdatePlaylistStmt, err = db.PrepareContext(ctx, addOrUpdatePlaylist); err != nil {
+		return nil, fmt.Errorf("error preparing query AddOrUpdatePlaylist: %w", err)
+	}
+	if q.addOrUpdatePlaylistItemStmt, err = db.PrepareContext(ctx, addOrUpdatePlaylistItem); err != nil {
+		return nil, fmt.Errorf("error preparing query AddOrUpdatePlaylistItem: %w", err)
+	}
+	if q.addSessionStmt, err = db.PrepareContext(ctx, addSession); err != nil {
+		return nil, fmt.Errorf("error preparing query AddSession: %w", err)
+	}
+	if q.addUserStmt, err = db.PrepareContext(ctx, addUser); err != nil {
+		return nil, fmt.Errorf("error preparing query AddUser: %w", err)
+	}
+	if q.getCurrentRoundStmt, err = db.PrepareContext(ctx, getCurrentRound); err != nil {
+		return nil, fmt.Errorf("error preparing query GetCurrentRound: %w", err)
+	}
+	if q.getNextPairStmt, err = db.PrepareContext(ctx, getNextPair); err != nil {
+		return nil, fmt.Errorf("error preparing query GetNextPair: %w", err)
+	}
+	if q.getPlaylistStmt, err = db.PrepareContext(ctx, getPlaylist); err != nil {
+		return nil, fmt.Errorf("error preparing query GetPlaylist: %w", err)
+	}
+	if q.getPlaylistItemStmt, err = db.PrepareContext(ctx, getPlaylistItem); err != nil {
+		return nil, fmt.Errorf("error preparing query GetPlaylistItem: %w", err)
+	}
+	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
+	}
+	if q.setCurrentRoundStmt, err = db.PrepareContext(ctx, setCurrentRound); err != nil {
+		return nil, fmt.Errorf("error preparing query SetCurrentRound: %w", err)
+	}
+	if q.setUserSessionStmt, err = db.PrepareContext(ctx, setUserSession); err != nil {
+		return nil, fmt.Errorf("error preparing query SetUserSession: %w", err)
+	}
+	return &q, nil
+}
+
+func (q *Queries) Close() error {
+	var err error
+	if q.addMatchStmt != nil {
+		if cerr := q.addMatchStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addMatchStmt: %w", cerr)
+		}
+	}
+	if q.addOrUpdatePlaylistStmt != nil {
+		if cerr := q.addOrUpdatePlaylistStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addOrUpdatePlaylistStmt: %w", cerr)
+		}
+	}
+	if q.addOrUpdatePlaylistItemStmt != nil {
+		if cerr := q.addOrUpdatePlaylistItemStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addOrUpdatePlaylistItemStmt: %w", cerr)
+		}
+	}
+	if q.addSessionStmt != nil {
+		if cerr := q.addSessionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addSessionStmt: %w", cerr)
+		}
+	}
+	if q.addUserStmt != nil {
+		if cerr := q.addUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addUserStmt: %w", cerr)
+		}
+	}
+	if q.getCurrentRoundStmt != nil {
+		if cerr := q.getCurrentRoundStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getCurrentRoundStmt: %w", cerr)
+		}
+	}
+	if q.getNextPairStmt != nil {
+		if cerr := q.getNextPairStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getNextPairStmt: %w", cerr)
+		}
+	}
+	if q.getPlaylistStmt != nil {
+		if cerr := q.getPlaylistStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getPlaylistStmt: %w", cerr)
+		}
+	}
+	if q.getPlaylistItemStmt != nil {
+		if cerr := q.getPlaylistItemStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getPlaylistItemStmt: %w", cerr)
+		}
+	}
+	if q.getUserStmt != nil {
+		if cerr := q.getUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserStmt: %w", cerr)
+		}
+	}
+	if q.setCurrentRoundStmt != nil {
+		if cerr := q.setCurrentRoundStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing setCurrentRoundStmt: %w", cerr)
+		}
+	}
+	if q.setUserSessionStmt != nil {
+		if cerr := q.setUserSessionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing setUserSessionStmt: %w", cerr)
+		}
+	}
+	return err
+}
+
+func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (sql.Result, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).ExecContext(ctx, args...)
+	case stmt != nil:
+		return stmt.ExecContext(ctx, args...)
+	default:
+		return q.db.ExecContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (*sql.Rows, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryContext(ctx, args...)
+	default:
+		return q.db.QueryContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) *sql.Row {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryRowContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryRowContext(ctx, args...)
+	default:
+		return q.db.QueryRowContext(ctx, query, args...)
+	}
+}
+
 type Queries struct {
-	db DBTX
+	db                          DBTX
+	tx                          *sql.Tx
+	addMatchStmt                *sql.Stmt
+	addOrUpdatePlaylistStmt     *sql.Stmt
+	addOrUpdatePlaylistItemStmt *sql.Stmt
+	addSessionStmt              *sql.Stmt
+	addUserStmt                 *sql.Stmt
+	getCurrentRoundStmt         *sql.Stmt
+	getNextPairStmt             *sql.Stmt
+	getPlaylistStmt             *sql.Stmt
+	getPlaylistItemStmt         *sql.Stmt
+	getUserStmt                 *sql.Stmt
+	setCurrentRoundStmt         *sql.Stmt
+	setUserSessionStmt          *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db: tx,
+		db:                          tx,
+		tx:                          tx,
+		addMatchStmt:                q.addMatchStmt,
+		addOrUpdatePlaylistStmt:     q.addOrUpdatePlaylistStmt,
+		addOrUpdatePlaylistItemStmt: q.addOrUpdatePlaylistItemStmt,
+		addSessionStmt:              q.addSessionStmt,
+		addUserStmt:                 q.addUserStmt,
+		getCurrentRoundStmt:         q.getCurrentRoundStmt,
+		getNextPairStmt:             q.getNextPairStmt,
+		getPlaylistStmt:             q.getPlaylistStmt,
+		getPlaylistItemStmt:         q.getPlaylistItemStmt,
+		getUserStmt:                 q.getUserStmt,
+		setCurrentRoundStmt:         q.setCurrentRoundStmt,
+		setUserSessionStmt:          q.setUserSessionStmt,
 	}
 }

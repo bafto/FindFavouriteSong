@@ -45,15 +45,10 @@ func configure_slog() {
 		panic(err)
 	}
 
-	addSource := false
-	if level <= slog.LevelDebug {
-		addSource = true
-	}
-
 	levelVar := &slog.LevelVar{}
 	levelVar.Set(level)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource: addSource,
+		AddSource: level <= slog.LevelDebug,
 		Level:     levelVar,
 	}))
 
@@ -105,12 +100,17 @@ func main() {
 	db_conn, err = create_db(ctx, "ffs.db")
 	if err != nil {
 		slog.Error("Error opening DB connection", "err", err)
-		os.Exit(1)
+		return
 	}
 	defer db_conn.Close()
 	slog.Info("Connected to database")
 
-	queries = db.New(db_conn)
+	queries, err = db.Prepare(ctx, db_conn)
+	if err != nil {
+		slog.Error("failed to prepare DB queries", "err", err)
+		return
+	}
+	defer queries.Close()
 
 	mux := http.NewServeMux()
 
