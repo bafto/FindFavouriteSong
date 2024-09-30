@@ -1,4 +1,5 @@
 PRAGMA user_version = 1;
+PRAGMA journal_mode = WAL;
 
 CREATE TABLE IF NOT EXISTS playlist (
 	id varchar(22) NOT NULL PRIMARY KEY, -- spotify id
