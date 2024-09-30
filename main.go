@@ -3,11 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/bafto/FindFavouriteSong/db"
 	"github.com/gorilla/securecookie"
@@ -24,6 +28,7 @@ func read_config() {
 	viper.SetDefault("port", "8080")
 	viper.SetDefault("log_level", "INFO")
 	viper.SetDefault("redirect_url", "http://localhost:8080/spotifyauthentication")
+	viper.SetDefault("shutdown_timeout", time.Second * 10)
 
 	viper.SetEnvPrefix("ffs")
 	viper.AutomaticEnv()
@@ -121,7 +126,29 @@ func main() {
 	mux.HandleFunc("/winner", withMiddleware(winnerHandler))
 
 	server := &http.Server{Addr: ":" + viper.GetString("port"), Handler: mux}
-	slog.Error("Server exited", "err", server.ListenAndServe())
+
+	go func() {
+		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("HTTP server errored", "err", err)
+			panic(err)
+		}
+		slog.Info("HTTP server stopped")
+	}()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	sig := <-sigChan
+	slog.Warn("received signal, shutting down server", "signal", sig.String())
+
+	shutdownCtx, cancelShutdown := context.WithTimeout(ctx, viper.GetDuration("shutdown_timeout"))
+	defer cancelShutdown()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		slog.Error("error while shutting down HTTP server, closing it forcefully", "err", err)
+		panic(errors.Join(err, server.Close()))
+	}
+	slog.Info("server shutdown gracefully")
 }
 
 func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
