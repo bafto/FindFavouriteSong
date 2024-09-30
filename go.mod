@@ -1,6 +1,7 @@
 module github.com/bafto/FindFavouriteSong
 
 go 1.23.1
+go 1.23.1
 
 require (
 	github.com/gorilla/securecookie v1.1.2
