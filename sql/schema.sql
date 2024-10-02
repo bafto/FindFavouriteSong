@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS playlist_item (
 CREATE TABLE IF NOT EXISTS session (
 	id INTEGER PRIMARY KEY,
 	playlist varchar(22) NOT NULL REFERENCES playlist,
-	current_round INTEGER NOT NULL
+	current_round INTEGER NOT NULL,
+	user varchar(22) NOT NULL REFERENCES user,
+	winner varchar(22) REFERENCES playlist_item
 );
 
 CREATE TABLE IF NOT EXISTS match (

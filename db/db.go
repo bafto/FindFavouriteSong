@@ -39,6 +39,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addUserStmt, err = db.PrepareContext(ctx, addUser); err != nil {
 		return nil, fmt.Errorf("error preparing query AddUser: %w", err)
 	}
+	if q.getAllWinnersForUserStmt, err = db.PrepareContext(ctx, getAllWinnersForUser); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAllWinnersForUser: %w", err)
+	}
 	if q.getCurrentRoundStmt, err = db.PrepareContext(ctx, getCurrentRound); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCurrentRound: %w", err)
 	}
@@ -54,11 +57,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
 	}
+	if q.getWinnerStmt, err = db.PrepareContext(ctx, getWinner); err != nil {
+		return nil, fmt.Errorf("error preparing query GetWinner: %w", err)
+	}
 	if q.setCurrentRoundStmt, err = db.PrepareContext(ctx, setCurrentRound); err != nil {
 		return nil, fmt.Errorf("error preparing query SetCurrentRound: %w", err)
 	}
 	if q.setUserSessionStmt, err = db.PrepareContext(ctx, setUserSession); err != nil {
 		return nil, fmt.Errorf("error preparing query SetUserSession: %w", err)
+	}
+	if q.setWinnerStmt, err = db.PrepareContext(ctx, setWinner); err != nil {
+		return nil, fmt.Errorf("error preparing query SetWinner: %w", err)
 	}
 	return &q, nil
 }
@@ -90,6 +99,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addUserStmt: %w", cerr)
 		}
 	}
+	if q.getAllWinnersForUserStmt != nil {
+		if cerr := q.getAllWinnersForUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAllWinnersForUserStmt: %w", cerr)
+		}
+	}
 	if q.getCurrentRoundStmt != nil {
 		if cerr := q.getCurrentRoundStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getCurrentRoundStmt: %w", cerr)
@@ -115,6 +129,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getUserStmt: %w", cerr)
 		}
 	}
+	if q.getWinnerStmt != nil {
+		if cerr := q.getWinnerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getWinnerStmt: %w", cerr)
+		}
+	}
 	if q.setCurrentRoundStmt != nil {
 		if cerr := q.setCurrentRoundStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing setCurrentRoundStmt: %w", cerr)
@@ -123,6 +142,11 @@ func (q *Queries) Close() error {
 	if q.setUserSessionStmt != nil {
 		if cerr := q.setUserSessionStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing setUserSessionStmt: %w", cerr)
+		}
+	}
+	if q.setWinnerStmt != nil {
+		if cerr := q.setWinnerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing setWinnerStmt: %w", cerr)
 		}
 	}
 	return err
@@ -169,13 +193,16 @@ type Queries struct {
 	addOrUpdatePlaylistItemStmt *sql.Stmt
 	addSessionStmt              *sql.Stmt
 	addUserStmt                 *sql.Stmt
+	getAllWinnersForUserStmt    *sql.Stmt
 	getCurrentRoundStmt         *sql.Stmt
 	getNextPairStmt             *sql.Stmt
 	getPlaylistStmt             *sql.Stmt
 	getPlaylistItemStmt         *sql.Stmt
 	getUserStmt                 *sql.Stmt
+	getWinnerStmt               *sql.Stmt
 	setCurrentRoundStmt         *sql.Stmt
 	setUserSessionStmt          *sql.Stmt
+	setWinnerStmt               *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -187,12 +214,15 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addOrUpdatePlaylistItemStmt: q.addOrUpdatePlaylistItemStmt,
 		addSessionStmt:              q.addSessionStmt,
 		addUserStmt:                 q.addUserStmt,
+		getAllWinnersForUserStmt:    q.getAllWinnersForUserStmt,
 		getCurrentRoundStmt:         q.getCurrentRoundStmt,
 		getNextPairStmt:             q.getNextPairStmt,
 		getPlaylistStmt:             q.getPlaylistStmt,
 		getPlaylistItemStmt:         q.getPlaylistItemStmt,
 		getUserStmt:                 q.getUserStmt,
+		getWinnerStmt:               q.getWinnerStmt,
 		setCurrentRoundStmt:         q.setCurrentRoundStmt,
 		setUserSessionStmt:          q.setUserSessionStmt,
+		setWinnerStmt:               q.setWinnerStmt,
 	}
 }

@@ -28,7 +28,7 @@ func read_config() {
 	viper.SetDefault("port", "8080")
 	viper.SetDefault("log_level", "INFO")
 	viper.SetDefault("redirect_url", "http://localhost:8080/spotifyauthentication")
-	viper.SetDefault("shutdown_timeout", time.Second * 10)
+	viper.SetDefault("shutdown_timeout", time.Second*10)
 
 	viper.SetEnvPrefix("ffs")
 	viper.AutomaticEnv()
@@ -75,6 +75,7 @@ var (
 	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.html"))
 	selectPlaylistHtml = template.Must(template.ParseFiles("select_playlist.html"))
 	winnerHtml         = template.Must(template.ParseFiles("winner.html"))
+	statsHtml          = template.Must(template.ParseFiles("stats.html"))
 
 	ctx     = context.Background()
 	db_conn *sql.DB
@@ -124,6 +125,7 @@ func main() {
 	mux.HandleFunc("POST /api/select_playlist", withMiddleware(selectPlaylistHandler))
 	mux.HandleFunc("/select_song", withMiddleware(selectSongHandler))
 	mux.HandleFunc("/winner", withMiddleware(winnerHandler))
+	mux.HandleFunc("/stats", withMiddleware(statsPageHandler))
 
 	server := &http.Server{Addr: ":" + viper.GetString("port"), Handler: mux}
 

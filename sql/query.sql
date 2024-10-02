@@ -27,10 +27,23 @@ UPDATE user
 SET current_session = ?
 WHERE id = ?;
 
+-- name: GetAllWinnersForUser :many
+SELECT winner FROM session
+WHERE user = ? AND winner IS NOT NULL;
+
 -- name: AddSession :one
 INSERT INTO session
-(id, playlist, current_round) VALUES (NULL, ?, 0)
+(id, playlist, current_round, user, winner) VALUES (NULL, ?, 0, ?, NULL)
 RETURNING session.id;
+
+-- name: GetWinner :one
+SELECT winner FROM session
+WHERE id = ?;
+
+-- name: SetWinner :exec
+UPDATE session
+SET winner = ?
+WHERE id = ?;
 
 -- name: GetCurrentRound :one
 SELECT current_round FROM session

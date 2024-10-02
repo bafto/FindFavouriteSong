@@ -34,6 +34,8 @@ type Session struct {
 	ID           int64
 	Playlist     string
 	CurrentRound int64
+	User         string
+	Winner       sql.NullString
 }
 
 type User struct {

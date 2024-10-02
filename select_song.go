@@ -71,12 +71,23 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 		case 0:
 			panic("unexpected pair length 0")
 		case 1:
-			logger.Info("found winner for session, redirecting to /winner", "winner", nextPair[0].ID)
+			winnerID := nextPair[0].ID
+
+			logger.Info("found winner for session, updating db", "winner", nextPair[0].ID)
+			if err := queries.SetWinner(r.Context(), db.SetWinnerParams{
+				Winner: notNull(winnerID),
+				ID:     sessionID,
+			}); err != nil {
+				logAndErr(w, logger, "failed to set winner in DB", http.StatusInternalServerError, "err", err)
+				return
+			}
+
 			if err := tx.Commit(); err != nil {
 				logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
 				return
 			}
-			http.Redirect(w, r, "/winner?winner="+nextPair[0].ID, http.StatusTemporaryRedirect)
+			logger.Info("redirecting to /winner")
+			http.Redirect(w, r, "/winner?winner="+winnerID, http.StatusTemporaryRedirect)
 			return
 		}
 	}

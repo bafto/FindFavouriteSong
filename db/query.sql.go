@@ -74,12 +74,17 @@ func (q *Queries) AddOrUpdatePlaylistItem(ctx context.Context, arg AddOrUpdatePl
 
 const addSession = `-- name: AddSession :one
 INSERT INTO session
-(id, playlist, current_round) VALUES (NULL, ?, 0)
+(id, playlist, current_round, user, winner) VALUES (NULL, ?, 0, ?, NULL)
 RETURNING session.id
 `
 
-func (q *Queries) AddSession(ctx context.Context, playlist string) (int64, error) {
-	row := q.queryRow(ctx, q.addSessionStmt, addSession, playlist)
+type AddSessionParams struct {
+	Playlist string
+	User     string
+}
+
+func (q *Queries) AddSession(ctx context.Context, arg AddSessionParams) (int64, error) {
+	row := q.queryRow(ctx, q.addSessionStmt, addSession, arg.Playlist, arg.User)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -95,6 +100,34 @@ func (q *Queries) AddUser(ctx context.Context, id string) (User, error) {
 	var i User
 	err := row.Scan(&i.ID, &i.CurrentSession)
 	return i, err
+}
+
+const getAllWinnersForUser = `-- name: GetAllWinnersForUser :many
+SELECT winner FROM session
+WHERE user = ? AND winner IS NOT NULL
+`
+
+func (q *Queries) GetAllWinnersForUser(ctx context.Context, user string) ([]sql.NullString, error) {
+	rows, err := q.query(ctx, q.getAllWinnersForUserStmt, getAllWinnersForUser, user)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []sql.NullString
+	for rows.Next() {
+		var winner sql.NullString
+		if err := rows.Scan(&winner); err != nil {
+			return nil, err
+		}
+		items = append(items, winner)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getCurrentRound = `-- name: GetCurrentRound :one
@@ -199,6 +232,18 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 	return i, err
 }
 
+const getWinner = `-- name: GetWinner :one
+SELECT winner FROM session
+WHERE id = ?
+`
+
+func (q *Queries) GetWinner(ctx context.Context, id int64) (sql.NullString, error) {
+	row := q.queryRow(ctx, q.getWinnerStmt, getWinner, id)
+	var winner sql.NullString
+	err := row.Scan(&winner)
+	return winner, err
+}
+
 const setCurrentRound = `-- name: SetCurrentRound :exec
 UPDATE session
 SET current_round = ?
@@ -228,5 +273,21 @@ type SetUserSessionParams struct {
 
 func (q *Queries) SetUserSession(ctx context.Context, arg SetUserSessionParams) error {
 	_, err := q.exec(ctx, q.setUserSessionStmt, setUserSession, arg.CurrentSession, arg.ID)
+	return err
+}
+
+const setWinner = `-- name: SetWinner :exec
+UPDATE session
+SET winner = ?
+WHERE id = ?
+`
+
+type SetWinnerParams struct {
+	Winner sql.NullString
+	ID     int64
+}
+
+func (q *Queries) SetWinner(ctx context.Context, arg SetWinnerParams) error {
+	_, err := q.exec(ctx, q.setWinnerStmt, setWinner, arg.Winner, arg.ID)
 	return err
 }

@@ -75,7 +75,10 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 	}
 
 	// create new session
-	sessionID, err := queries.AddSession(r.Context(), playlistId)
+	sessionID, err := queries.AddSession(r.Context(), db.AddSessionParams{
+		Playlist: playlistId,
+		User:     user.ID,
+	})
 	if err != nil {
 		logAndErr(w, logger, "could not insert session into db", http.StatusInternalServerError, "err", err)
 	}
