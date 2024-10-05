@@ -122,13 +122,13 @@ func getAllPlaylistItems(ctx context.Context, client *spotify.Client, playlistId
 	items = append(items, page.Items...)
 	for {
 		err = client.NextPage(ctx, page)
-		items = append(items, page.Items...)
 		if err == spotify.ErrNoMorePages {
 			return items, nil
 		}
 		if err != nil {
 			return items, err
 		}
+		items = append(items, page.Items...)
 	}
 }
 
