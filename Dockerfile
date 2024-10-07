@@ -8,6 +8,13 @@ RUN go build -ldflags "-s -w" -o FindFavouriteSong .
 
 FROM alpine as run
 
+RUN apk add --no-cache tzdata
+
+ENV TZ=Europe/Berlin
+
 COPY --from=build /app/FindFavouriteSong .
 
-CMD [ "./FindFavouriteSong" ]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+CMD [ "/entrypoint.sh" ]
