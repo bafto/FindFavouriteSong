@@ -11,41 +11,18 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/bafto/FindFavouriteSong/db"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
-	"github.com/spf13/viper"
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
 
-func read_config() {
-	viper.SetDefault("spotify_client_id", "")
-	viper.SetDefault("spotify_client_secret", "")
-	viper.SetDefault("db_path", "ffs.db")
-	viper.SetDefault("port", "8080")
-	viper.SetDefault("log_level", "INFO")
-	viper.SetDefault("redirect_url", "http://localhost:8080/spotifyauthentication")
-	viper.SetDefault("shutdown_timeout", time.Second*10)
-
-	viper.SetEnvPrefix("ffs")
-	viper.AutomaticEnv()
-
-	viper.AddConfigPath(".")
-	viper.SetConfigName("ffs_config")
-	viper.SetConfigType("yaml")
-
-	if err := viper.ReadInConfig(); err != nil {
-		panic(err)
-	}
-}
-
 func configure_slog() {
 	var level slog.Level
 	if err := level.UnmarshalText(
-		[]byte(viper.GetString("log_level")),
+		[]byte(config.Log_level),
 	); err != nil {
 		panic(err)
 	}
@@ -72,6 +49,8 @@ type ActiveUser struct {
 }
 
 var (
+	config Config
+
 	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.html"))
 	selectPlaylistHtml = template.Must(template.ParseFiles("select_playlist.html"))
 	winnerHtml         = template.Must(template.ParseFiles("winner.html"))
@@ -92,17 +71,20 @@ var (
 )
 
 func main() {
-	read_config()
+	var err error
+	config, err = read_config()
+	if err != nil {
+		panic(err)
+	}
 	configure_slog()
 
 	spotifyAuth = spotifyauth.New(
-		spotifyauth.WithRedirectURL(viper.GetString("redirect_url")),
+		spotifyauth.WithRedirectURL(config.Redirect_url),
 		spotifyauth.WithScopes(spotifyauth.ScopePlaylistReadPrivate, spotifyauth.ScopeUserReadPrivate),
-		spotifyauth.WithClientSecret(viper.GetString("SPOTIFY_CLIENT_SECRET")),
-		spotifyauth.WithClientID(viper.GetString("SPOTIFY_CLIENT_ID")),
+		spotifyauth.WithClientSecret(config.Spotify_client_secret),
+		spotifyauth.WithClientID(config.Spotify_client_id),
 	)
 
-	var err error
 	db_conn, err = create_db(ctx, "ffs.db")
 	if err != nil {
 		slog.Error("Error opening DB connection", "err", err)
@@ -127,7 +109,7 @@ func main() {
 	mux.HandleFunc("/winner", withMiddleware(winnerHandler))
 	mux.HandleFunc("/stats", withMiddleware(statsPageHandler))
 
-	server := &http.Server{Addr: ":" + viper.GetString("port"), Handler: mux}
+	server := &http.Server{Addr: ":" + config.Port, Handler: mux}
 
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
@@ -143,7 +125,7 @@ func main() {
 	sig := <-sigChan
 	slog.Warn("received signal, shutting down server", "signal", sig.String())
 
-	shutdownCtx, cancelShutdown := context.WithTimeout(ctx, viper.GetDuration("shutdown_timeout"))
+	shutdownCtx, cancelShutdown := context.WithTimeout(ctx, config.Shutdown_timeout)
 	defer cancelShutdown()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {

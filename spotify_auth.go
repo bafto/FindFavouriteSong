@@ -11,7 +11,7 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-func withAuthMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFunc {
+func withSpotifyAuthMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		if s.IsNew {
 			state := generateState(state_length)

@@ -46,6 +46,27 @@ func withLoggingMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func withAuthMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		logger := getLogger(r)
+
+		user, passwd, ok := r.BasicAuth()
+		if !ok {
+			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+			logAndErr(w, logger, "no BasicAuth header given", http.StatusUnauthorized)
+			return
+		}
+
+		if expectedPassword, ok := config.Users[user]; !ok || expectedPassword != passwd {
+			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+			logAndErr(w, logger, "invalid password for user", http.StatusUnauthorized, "user", user)
+			return
+		}
+
+		nextHandler(w, r)
+	}
+}
+
 type SessionHandlerFunc func(http.ResponseWriter, *http.Request, *sessions.Session)
 
 func withSessionMiddleware(nextHandler SessionHandlerFunc) http.HandlerFunc {
@@ -79,10 +100,12 @@ func withTimerMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFunc {
 func withMiddleware(nextHandler SessionHandlerFunc) http.HandlerFunc {
 	return withPanicMiddleware(
 		withLoggingMiddleware(
-			withSessionMiddleware(
-				withAuthMiddleware(
-					withTimerMiddleware(
-						nextHandler,
+			withAuthMiddleware(
+				withSessionMiddleware(
+					withSpotifyAuthMiddleware(
+						withTimerMiddleware(
+							nextHandler,
+						),
 					),
 				),
 			),
