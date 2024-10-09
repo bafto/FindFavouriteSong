@@ -2,6 +2,7 @@ FROM golang:alpine as build
 
 COPY . /app
 WORKDIR /app
+ENV CGO_ENABLED=1
 RUN go build -ldflags "-s -w" -o FindFavouriteSong .
 
 FROM alpine as run
