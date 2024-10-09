@@ -1,3 +1,3 @@
 #!/bin/sh
 
-/app/FindFavouriteSong > /dev/stdout
+cd /app && /app/FindFavouriteSong > /dev/stdout
