@@ -10,7 +10,7 @@ RUN apk add --no-cache tzdata
 
 ENV TZ=Europe/Berlin
 
-COPY --from=build /app/FindFavouriteSong .
+COPY --from=build /app/FindFavouriteSong /app/FindFavouriteSong
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
