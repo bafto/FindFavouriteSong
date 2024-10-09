@@ -79,6 +79,7 @@ func main() {
 	configure_slog()
 
 	sessionManager.Options.Domain = config.Domain
+	sessionManager.Options.Secure = false
 
 	spotifyAuth = spotifyauth.New(
 		spotifyauth.WithRedirectURL(config.Redirect_url),
