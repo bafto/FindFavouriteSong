@@ -14,13 +14,17 @@ import (
 func withSpotifyAuthMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		if s.IsNew {
+			logger := getLogger(r)
+
 			state := generateState(state_length)
 			stateMap.Store(getIp(r), state)
 			authURL := spotifyAuth.AuthURL(state)
 
-			s.Save(r, w)
+			if err := s.Save(r, w); err != nil {
+				logger.Warn("failed to save session", "err", err, "session-name", s.Name())
+			}
 			http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
-			getLogger(r).Info("redirecting to login page")
+			logger.Info("redirecting to login page")
 			return
 		}
 
