@@ -1,5 +1,7 @@
 FROM golang:alpine as build
 
+RUN apk add --no-cache --update gcc g++
+
 COPY . /app
 WORKDIR /app
 ENV CGO_ENABLED=1
