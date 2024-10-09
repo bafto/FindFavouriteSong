@@ -15,6 +15,7 @@ type Config struct {
 	Redirect_url          string            `mapstructure:"redirect_url"`
 	Shutdown_timeout      time.Duration     `mapstructure:"shutdown_timeout"`
 	Users                 map[string]string `mapstructure:"users"`
+	Domain                string            `mapstructure:"domain"`
 }
 
 func read_config() (Config, error) {
@@ -26,6 +27,7 @@ func read_config() (Config, error) {
 	viper.SetDefault("redirect_url", "http://localhost:8080/spotifyauthentication")
 	viper.SetDefault("shutdown_timeout", time.Second*10)
 	viper.SetDefault("users", map[string]string{})
+	viper.SetDefault("domain", "localhost")
 
 	viper.SetEnvPrefix("ffs")
 	viper.AutomaticEnv()
