@@ -78,11 +78,6 @@ func main() {
 	}
 	configure_slog()
 
-	sessionManager.Options.Domain = config.Domain
-	sessionManager.Options.HttpOnly = true
-	sessionManager.Options.Secure = false
-	sessionManager.Options.SameSite = http.SameSiteLaxMode
-
 	spotifyAuth = spotifyauth.New(
 		spotifyauth.WithRedirectURL(config.Redirect_url),
 		spotifyauth.WithScopes(spotifyauth.ScopePlaylistReadPrivate, spotifyauth.ScopeUserReadPrivate),
