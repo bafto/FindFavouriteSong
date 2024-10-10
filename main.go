@@ -90,7 +90,7 @@ func main() {
 		spotifyauth.WithClientID(config.Spotify_client_id),
 	)
 
-	db_conn, err = create_db(ctx, "ffs.db")
+	db_conn, err = create_db(ctx, config.Db_path)
 	if err != nil {
 		slog.Error("Error opening DB connection", "err", err)
 		return
