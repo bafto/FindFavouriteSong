@@ -27,13 +27,13 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 
 	// parse playlist url
 	playlistUrl := r.FormValue("playlist_url")
-	logger.Info("User selected playlist", "playlist-url", playlistUrl)
+	logger.Debug("User selected playlist", "playlist-url", playlistUrl)
 	playlistId, err := getPlaylistIdFromURL(playlistUrl)
 	if err != nil {
 		logAndErr(w, logger, "could not parse spotify id from playlist url", http.StatusNotFound, "err", err)
 		return
 	}
-	logger.Info("parsed playlist id", "playlist-id", playlistId)
+	logger.Debug("parsed playlist id", "playlist-id", playlistId)
 
 	// fetch playlist info
 	playlist, err := user.client.GetPlaylist(r.Context(), spotify.ID(playlistId))
@@ -83,7 +83,7 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		logAndErr(w, logger, "could not insert session into db", http.StatusInternalServerError, "err", err)
 	}
 	logger = logger.With("session-id", sessionID)
-	logger.Info("created new session")
+	logger.Debug("created new session")
 
 	// add new session to DB
 	if err = queries.SetUserSession(r.Context(), db.SetUserSessionParams{
@@ -101,7 +101,7 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 	user.CurrentSession = sql.NullInt64{Int64: sessionID, Valid: true}
 	logger.Info("added session to user")
 
-	logger.Info("redirecting to /select_song")
+	logger.Debug("redirecting to /select_song")
 	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
 }
 

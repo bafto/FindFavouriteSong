@@ -24,7 +24,7 @@ func withSpotifyAuthMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFun
 				logger.Warn("failed to save session", "err", err, "session-name", s.Name())
 			}
 			http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
-			logger.Info("redirecting to login page")
+			logger.Debug("redirecting to login page")
 			return
 		}
 
@@ -53,10 +53,10 @@ func authHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 		return
 	}
 	stateMap.Delete(ip)
-	logger.Info("received spotify token with valid state")
+	logger.Debug("received spotify token with valid state")
 
 	spotifyClient = spotify.New(spotifyAuth.Client(context.Background(), tok), spotify.WithRetry(true))
-	logger.Info("created spotify client")
+	logger.Debug("created spotify client")
 	userData, err := spotifyClient.CurrentUser(context.Background())
 	if err != nil {
 		logAndErr(w, logger, "unable to retrieve user info", http.StatusInternalServerError, "err", err)
@@ -75,7 +75,7 @@ func authHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
 
 	user, err := queries.GetUser(r.Context(), userData.ID)
 	if err != nil {
-		logger.Info("could not retrieve user from DB, adding him")
+		logger.Debug("could not retrieve user from DB, adding him")
 		user, err = queries.AddUser(r.Context(), userData.ID)
 		if err != nil {
 			logAndErr(w, logger, "unable to load user info from db", http.StatusInternalServerError, "err", err)

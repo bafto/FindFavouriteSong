@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/gorilla/sessions"
@@ -13,7 +14,7 @@ func withPanicMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				slog.Error("panic recovered in handler", "err", err, "url", r.URL)
+				slog.Error("panic recovered in handler", "err", err, "url", r.URL, "stacktrace", string(debug.Stack()))
 			}
 		}()
 		nextHandler(w, r)
@@ -57,9 +58,11 @@ func withAuthMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		r = withLogger(r, logger.With("basic-auth-user", user))
+
 		if expectedPassword, ok := config.Users[user]; !ok || expectedPassword != passwd {
 			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-			logAndErr(w, logger, "invalid password for user", http.StatusUnauthorized, "user", user)
+			logAndErr(w, logger, "invalid password for user", http.StatusUnauthorized)
 			return
 		}
 
@@ -80,7 +83,7 @@ func withSessionMiddleware(nextHandler SessionHandlerFunc) http.HandlerFunc {
 		}
 
 		if user, ok := getActiveUser(session); ok {
-			r = withLogger(r, logger.With("user-id", user.ID))
+			r = withLogger(r, logger.With("user-spotify-id", user.ID))
 		}
 
 		nextHandler(w, r, session)

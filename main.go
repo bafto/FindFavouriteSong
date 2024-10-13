@@ -114,11 +114,12 @@ func main() {
 	server := &http.Server{Addr: ":" + config.Port, Handler: mux}
 
 	go func() {
+		slog.Info("starting http server")
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("HTTP server errored", "err", err)
 			panic(err)
 		}
-		slog.Info("HTTP server stopped")
+		slog.Warn("HTTP server stopped")
 	}()
 
 	sigChan := make(chan os.Signal, 1)
@@ -147,12 +148,12 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 	}
 
 	if !user.CurrentSession.Valid {
-		logger.Info("user has no active session, displaying select_playlist.html")
+		logger.Debug("user has no active session, displaying select_playlist.html")
 		selectPlaylistHtml.Execute(w, nil)
 		return
 	}
 
-	logger.Info("redirecting to /select_song")
+	logger.Debug("redirecting to /select_song")
 	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
 }
 
@@ -188,7 +189,7 @@ func winnerHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) 
 		return
 	}
 	user.CurrentSession.Valid = false
-	logger.Info("reset user session to NULL")
+	logger.Debug("reset user session to NULL")
 
 	winnerHtml.Execute(w, map[string]string{
 		"Image":   winnerItem.Image.String,

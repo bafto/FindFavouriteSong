@@ -23,7 +23,7 @@ func statsPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessio
 		logAndErr(w, logger, "failed to get winners from db", http.StatusInternalServerError, "err", err)
 		return
 	}
-	logger.Info("retreived winners from DB", "n-winners", len(winners))
+	logger.Debug("retrieved winners from DB", "n-winners", len(winners))
 
 	slices.SortFunc(winners, func(a, b Winner) int {
 		return int(b.N - a.N)

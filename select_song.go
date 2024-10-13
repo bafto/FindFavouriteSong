@@ -73,7 +73,7 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 		case 1:
 			winnerID := nextPair[0].ID
 
-			logger.Info("found winner for session, updating db", "winner", nextPair[0].ID)
+			logger.Debug("found winner for session, updating db", "winner", nextPair[0].ID)
 			if err := queries.SetWinner(r.Context(), db.SetWinnerParams{
 				Winner: notNull(winnerID),
 				ID:     sessionID,
@@ -86,7 +86,7 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 				logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
 				return
 			}
-			logger.Info("redirecting to /winner")
+			logger.Debug("redirecting to /winner")
 			http.Redirect(w, r, "/winner?winner="+winnerID, http.StatusTemporaryRedirect)
 			return
 		}
