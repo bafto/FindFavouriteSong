@@ -72,6 +72,21 @@ func (q *Queries) AddOrUpdatePlaylistItem(ctx context.Context, arg AddOrUpdatePl
 	return err
 }
 
+const addPlaylistAddedByUser = `-- name: AddPlaylistAddedByUser :exec
+INSERT INTO playlist_added_by_user
+(user, playlist) VALUES (?, ?)
+`
+
+type AddPlaylistAddedByUserParams struct {
+	User     string
+	Playlist string
+}
+
+func (q *Queries) AddPlaylistAddedByUser(ctx context.Context, arg AddPlaylistAddedByUserParams) error {
+	_, err := q.exec(ctx, q.addPlaylistAddedByUserStmt, addPlaylistAddedByUser, arg.User, arg.Playlist)
+	return err
+}
+
 const addSession = `-- name: AddSession :one
 INSERT INTO session
 (id, playlist, current_round, user, winner) VALUES (NULL, ?, 0, ?, NULL)
@@ -218,6 +233,34 @@ func (q *Queries) GetPlaylistItem(ctx context.Context, id string) (PlaylistItem,
 		&i.Playlist,
 	)
 	return i, err
+}
+
+const getPlaylistsForUser = `-- name: GetPlaylistsForUser :many
+SELECT playlist FROM playlist_added_by_user
+WHERE user = ?
+`
+
+func (q *Queries) GetPlaylistsForUser(ctx context.Context, user string) ([]string, error) {
+	rows, err := q.query(ctx, q.getPlaylistsForUserStmt, getPlaylistsForUser, user)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var playlist string
+		if err := rows.Scan(&playlist); err != nil {
+			return nil, err
+		}
+		items = append(items, playlist)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUser = `-- name: GetUser :one

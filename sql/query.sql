@@ -69,4 +69,12 @@ ORDER BY RANDOM() DESC LIMIT 2;
 
 -- name: AddMatch :exec
 INSERT INTO match
-(id, session, round_number, winner, loser) VALUES (NULL, ?, ?, ?, ?)
+(id, session, round_number, winner, loser) VALUES (NULL, ?, ?, ?, ?);
+
+-- name: AddPlaylistAddedByUser :exec
+INSERT INTO playlist_added_by_user
+(user, playlist) VALUES (?, ?);
+
+-- name: GetPlaylistsForUser :many
+SELECT playlist FROM playlist_added_by_user
+WHERE user = ?;

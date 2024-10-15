@@ -22,6 +22,11 @@ type Playlist struct {
 	Url  sql.NullString
 }
 
+type PlaylistAddedByUser struct {
+	User     string
+	Playlist string
+}
+
 type PlaylistItem struct {
 	ID       string
 	Title    sql.NullString

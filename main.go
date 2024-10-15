@@ -87,13 +87,17 @@ func main() {
 		spotifyauth.WithClientID(config.Spotify_client_id),
 	)
 
-	db_conn, err = create_db(ctx, config.Db_path)
+	db_conn, err = create_db(ctx, config.Datasource)
 	if err != nil {
 		slog.Error("Error opening DB connection", "err", err)
 		return
 	}
 	defer db_conn.Close()
-	slog.Info("Connected to database")
+	slog.Info("Connected to database, migrating schema")
+	if err := migrate_db(ctx, db_conn); err != nil {
+		slog.Error("Error migrating db schema", "err", err)
+		return
+	}
 
 	queries, err = db.Prepare(ctx, db_conn)
 	if err != nil {

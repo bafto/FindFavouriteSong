@@ -33,6 +33,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addOrUpdatePlaylistItemStmt, err = db.PrepareContext(ctx, addOrUpdatePlaylistItem); err != nil {
 		return nil, fmt.Errorf("error preparing query AddOrUpdatePlaylistItem: %w", err)
 	}
+	if q.addPlaylistAddedByUserStmt, err = db.PrepareContext(ctx, addPlaylistAddedByUser); err != nil {
+		return nil, fmt.Errorf("error preparing query AddPlaylistAddedByUser: %w", err)
+	}
 	if q.addSessionStmt, err = db.PrepareContext(ctx, addSession); err != nil {
 		return nil, fmt.Errorf("error preparing query AddSession: %w", err)
 	}
@@ -53,6 +56,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getPlaylistItemStmt, err = db.PrepareContext(ctx, getPlaylistItem); err != nil {
 		return nil, fmt.Errorf("error preparing query GetPlaylistItem: %w", err)
+	}
+	if q.getPlaylistsForUserStmt, err = db.PrepareContext(ctx, getPlaylistsForUser); err != nil {
+		return nil, fmt.Errorf("error preparing query GetPlaylistsForUser: %w", err)
 	}
 	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
@@ -89,6 +95,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addOrUpdatePlaylistItemStmt: %w", cerr)
 		}
 	}
+	if q.addPlaylistAddedByUserStmt != nil {
+		if cerr := q.addPlaylistAddedByUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addPlaylistAddedByUserStmt: %w", cerr)
+		}
+	}
 	if q.addSessionStmt != nil {
 		if cerr := q.addSessionStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addSessionStmt: %w", cerr)
@@ -122,6 +133,11 @@ func (q *Queries) Close() error {
 	if q.getPlaylistItemStmt != nil {
 		if cerr := q.getPlaylistItemStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getPlaylistItemStmt: %w", cerr)
+		}
+	}
+	if q.getPlaylistsForUserStmt != nil {
+		if cerr := q.getPlaylistsForUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getPlaylistsForUserStmt: %w", cerr)
 		}
 	}
 	if q.getUserStmt != nil {
@@ -191,6 +207,7 @@ type Queries struct {
 	addMatchStmt                *sql.Stmt
 	addOrUpdatePlaylistStmt     *sql.Stmt
 	addOrUpdatePlaylistItemStmt *sql.Stmt
+	addPlaylistAddedByUserStmt  *sql.Stmt
 	addSessionStmt              *sql.Stmt
 	addUserStmt                 *sql.Stmt
 	getAllWinnersForUserStmt    *sql.Stmt
@@ -198,6 +215,7 @@ type Queries struct {
 	getNextPairStmt             *sql.Stmt
 	getPlaylistStmt             *sql.Stmt
 	getPlaylistItemStmt         *sql.Stmt
+	getPlaylistsForUserStmt     *sql.Stmt
 	getUserStmt                 *sql.Stmt
 	getWinnerStmt               *sql.Stmt
 	setCurrentRoundStmt         *sql.Stmt
@@ -212,6 +230,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addMatchStmt:                q.addMatchStmt,
 		addOrUpdatePlaylistStmt:     q.addOrUpdatePlaylistStmt,
 		addOrUpdatePlaylistItemStmt: q.addOrUpdatePlaylistItemStmt,
+		addPlaylistAddedByUserStmt:  q.addPlaylistAddedByUserStmt,
 		addSessionStmt:              q.addSessionStmt,
 		addUserStmt:                 q.addUserStmt,
 		getAllWinnersForUserStmt:    q.getAllWinnersForUserStmt,
@@ -219,6 +238,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getNextPairStmt:             q.getNextPairStmt,
 		getPlaylistStmt:             q.getPlaylistStmt,
 		getPlaylistItemStmt:         q.getPlaylistItemStmt,
+		getPlaylistsForUserStmt:     q.getPlaylistsForUserStmt,
 		getUserStmt:                 q.getUserStmt,
 		getWinnerStmt:               q.getWinnerStmt,
 		setCurrentRoundStmt:         q.setCurrentRoundStmt,

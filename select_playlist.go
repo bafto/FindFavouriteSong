@@ -51,6 +51,13 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		logAndErr(w, logger, "could not insert playlist into db", http.StatusInternalServerError, "err", err)
 		return
 	}
+	if err := queries.AddPlaylistAddedByUser(r.Context(), db.AddPlaylistAddedByUserParams{
+		User:     user.ID,
+		Playlist: playlistId,
+	}); err != nil {
+		logAndErr(w, logger, "could not insert playlist_added_by_user into db", http.StatusInternalServerError, "err", err)
+		return
+	}
 
 	// fetch playlist items
 	playlistItems, err := getAllPlaylistItems(ctx, user.client, playlist.ID)

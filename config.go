@@ -9,7 +9,7 @@ import (
 type Config struct {
 	Spotify_client_id     string            `mapstructure:"spotify_client_id"`
 	Spotify_client_secret string            `mapstructure:"spotify_client_secret"`
-	Db_path               string            `mapstructure:"db_path"`
+	Datasource            string            `mapstructure:"data_source"`
 	Port                  string            `mapstructure:"port"`
 	Log_level             string            `mapstructure:"log_level"`
 	Redirect_url          string            `mapstructure:"redirect_url"`
