@@ -72,9 +72,9 @@ INSERT INTO match
 (id, session, round_number, winner, loser) VALUES (NULL, ?, ?, ?, ?);
 
 -- name: AddPlaylistAddedByUser :exec
-INSERT INTO playlist_added_by_user
+INSERT OR IGNORE INTO playlist_added_by_user
 (user, playlist) VALUES (?, ?);
 
 -- name: GetPlaylistsForUser :many
-SELECT playlist FROM playlist_added_by_user
-WHERE user = ?;
+SELECT p.* FROM playlist_added_by_user pa, playlist p
+WHERE pa.user = ? AND p.id = pa.playlist;

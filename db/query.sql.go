@@ -73,7 +73,7 @@ func (q *Queries) AddOrUpdatePlaylistItem(ctx context.Context, arg AddOrUpdatePl
 }
 
 const addPlaylistAddedByUser = `-- name: AddPlaylistAddedByUser :exec
-INSERT INTO playlist_added_by_user
+INSERT OR IGNORE INTO playlist_added_by_user
 (user, playlist) VALUES (?, ?)
 `
 
@@ -236,23 +236,23 @@ func (q *Queries) GetPlaylistItem(ctx context.Context, id string) (PlaylistItem,
 }
 
 const getPlaylistsForUser = `-- name: GetPlaylistsForUser :many
-SELECT playlist FROM playlist_added_by_user
-WHERE user = ?
+SELECT p.id, p.name, p.url FROM playlist_added_by_user pa, playlist p
+WHERE pa.user = ? AND p.id = pa.playlist
 `
 
-func (q *Queries) GetPlaylistsForUser(ctx context.Context, user string) ([]string, error) {
+func (q *Queries) GetPlaylistsForUser(ctx context.Context, user string) ([]Playlist, error) {
 	rows, err := q.query(ctx, q.getPlaylistsForUserStmt, getPlaylistsForUser, user)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []Playlist
 	for rows.Next() {
-		var playlist string
-		if err := rows.Scan(&playlist); err != nil {
+		var i Playlist
+		if err := rows.Scan(&i.ID, &i.Name, &i.Url); err != nil {
 			return nil, err
 		}
-		items = append(items, playlist)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

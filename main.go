@@ -30,8 +30,7 @@ func configure_slog() {
 	levelVar := &slog.LevelVar{}
 	levelVar.Set(level)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource: level <= slog.LevelDebug,
-		Level:     levelVar,
+		Level: levelVar,
 	}))
 
 	slog.SetDefault(logger)
@@ -154,7 +153,14 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 
 	if !user.CurrentSession.Valid {
 		logger.Debug("user has no active session, displaying select_playlist.html")
-		selectPlaylistHtml.Execute(w, nil)
+
+		playlists, err := queries.GetPlaylistsForUser(r.Context(), user.ID)
+		if err != nil {
+			logAndErr(w, logger, "Error loading playlists for user", http.StatusInternalServerError, "err", err)
+			return
+		}
+
+		selectPlaylistHtml.Execute(w, mapPlaylists(playlists))
 		return
 	}
 
@@ -240,4 +246,19 @@ func notNull(s string) sql.NullString {
 func logAndErr(w http.ResponseWriter, logger *slog.Logger, msg string, status int, args ...any) {
 	logger.Error(msg, args...)
 	http.Error(w, msg, status)
+}
+
+type TemplatePlaylist struct {
+	Name string
+	Url  string
+}
+
+func mapPlaylists(playlists []db.Playlist) []TemplatePlaylist {
+	result := make([]TemplatePlaylist, 0, len(playlists))
+	for _, playlist := range playlists {
+		if playlist.Name.Valid && playlist.Url.Valid {
+			result = append(result, TemplatePlaylist{Name: playlist.Name.String, Url: playlist.Url.String})
+		}
+	}
+	return result
 }

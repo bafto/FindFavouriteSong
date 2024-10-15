@@ -14,6 +14,8 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 	}
 	defer tx.Rollback()
 
+	logger.Debug("selected song")
+
 	sessionID := user.CurrentSession.Int64
 	logger = logger.With("session-id", sessionID)
 
@@ -39,6 +41,12 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 		logAndErr(w, logger, "could not create match in db", http.StatusInternalServerError, "err", err)
 		return
 	}
+
+	if err := tx.Commit(); err != nil {
+		logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
+		return
+	}
+	logger.Debug("inserted match into db")
 }
 
 func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
