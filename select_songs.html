@@ -5,7 +5,8 @@
 	<title>Find Favourite Song</title>
 	<script>
 		function select_song(winner, loser) {
-			window.location.href = `/select_song?winner=${winner}&loser=${loser}`
+			fetch(`/api/select_song?winner=${winner}&loser=${loser}`)
+				.then(() => window.location.reload());
 		}
 	</script>
 </head>

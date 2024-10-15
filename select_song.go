@@ -24,19 +24,37 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 	}
 
 	winnerID, loserID := r.FormValue("winner"), r.FormValue("loser")
-	if winnerID != "" && loserID != "" {
-		logger = logger.With("winner-id", winnerID, "loser-id", loserID)
+	logger = logger.With("winner-id", winnerID, "loser-id", loserID)
+	if winnerID == "" || loserID == "" {
+		logAndErr(w, logger, "winner or loser missing", http.StatusBadRequest)
+		return
+	}
 
-		if err := queries.AddMatch(r.Context(), db.AddMatchParams{
-			Session:     sessionID,
-			RoundNumber: currentRound,
-			Winner:      winnerID,
-			Loser:       loserID,
-		}); err != nil {
-			logAndErr(w, logger, "could not create match in db", http.StatusInternalServerError, "err", err)
-			return
-		}
+	if err := queries.AddMatch(r.Context(), db.AddMatchParams{
+		Session:     sessionID,
+		RoundNumber: currentRound,
+		Winner:      winnerID,
+		Loser:       loserID,
+	}); err != nil {
+		logAndErr(w, logger, "could not create match in db", http.StatusInternalServerError, "err", err)
+		return
+	}
+}
 
+func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	logger, user, tx, queries, ok := getLoggerUserTransactionQueries(w, r, s)
+	if !ok {
+		return
+	}
+	defer tx.Rollback()
+
+	sessionID := user.CurrentSession.Int64
+	logger = logger.With("session-id", sessionID)
+
+	currentRound, err := queries.GetCurrentRound(r.Context(), sessionID)
+	if err != nil {
+		logAndErr(w, logger, "could not determine current round number from DB", http.StatusInternalServerError, "err", err)
+		return
 	}
 
 	nextPair, err := queries.GetNextPair(r.Context(), db.GetNextPairParams{

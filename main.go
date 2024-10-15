@@ -111,7 +111,8 @@ func main() {
 	mux.HandleFunc("/", withMiddleware(defaultHandler))
 	mux.HandleFunc("/spotifyauthentication", withMiddleware(authHandler))
 	mux.HandleFunc("POST /api/select_playlist", withMiddleware(selectPlaylistHandler))
-	mux.HandleFunc("/select_song", withMiddleware(selectSongHandler))
+	mux.HandleFunc("/select_song", withMiddleware(selectSongPageHandler))
+	mux.HandleFunc("POST /api/select_song", withMiddleware(selectSongHandler))
 	mux.HandleFunc("/winner", withMiddleware(winnerHandler))
 	mux.HandleFunc("/stats", withMiddleware(statsPageHandler))
 
