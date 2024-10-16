@@ -12,7 +12,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	_ "github.com/mattn/go-sqlite3"
+	sqlite3_driver "github.com/mattn/go-sqlite3"
 )
 
 //go:generate sqlc generate
@@ -20,7 +20,7 @@ import (
 //go:embed sql/migrations/*.sql
 var migrations embed.FS
 
-// opens the database connection and creates the schema
+// opens the database connection
 func create_db(ctx context.Context, dsn string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
@@ -30,8 +30,20 @@ func create_db(ctx context.Context, dsn string) (*sql.DB, error) {
 	return db, db.Ping()
 }
 
-// TODO: create backup before migration
 func migrate_db(ctx context.Context, db *sql.DB) error {
+	slog.Info("creating database backup before migration", "backup-path", config.BackupPath)
+	// backupDest
+	backupDest, err := create_db(ctx, config.BackupPath)
+	if err != nil {
+		return fmt.Errorf("failed to create backup db: %w", err)
+	}
+	defer backupDest.Close()
+
+	if err := backup_db(ctx, backupDest, db); err != nil {
+		return fmt.Errorf("failed to backup db: %w", err)
+	}
+	slog.Info("done creating database backup")
+
 	// create driver and source
 	driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 	if err != nil {
@@ -55,4 +67,52 @@ func migrate_db(ctx context.Context, db *sql.DB) error {
 	v, d, err := m.Version()
 	slog.Info("Migrated db", "version", v, "dirty", d, "err", err)
 	return nil
+}
+
+func backup_db(ctx context.Context, dest, src *sql.DB) error {
+	destConn, err := dest.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to establish connection to backup destination db: %w", err)
+	}
+	defer destConn.Close()
+
+	srcConn, err := src.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to establish connection to backup source db: %w", err)
+	}
+	defer srcConn.Close()
+
+	return destConn.Raw(func(destConn any) error {
+		return srcConn.Raw(func(srcConn any) error {
+			destSQLiteConn, ok := destConn.(*sqlite3_driver.SQLiteConn)
+			if !ok {
+				return fmt.Errorf("can't convert destination connection to SQLiteConn")
+			}
+
+			srcSQLiteConn, ok := srcConn.(*sqlite3_driver.SQLiteConn)
+			if !ok {
+				return fmt.Errorf("can't convert source connection to SQLiteConn")
+			}
+
+			b, err := destSQLiteConn.Backup("main", srcSQLiteConn, "main")
+			if err != nil {
+				return fmt.Errorf("error initializing SQLite backup: %w", err)
+			}
+
+			done, err := b.Step(-1)
+			if !done {
+				return fmt.Errorf("step of -1, but not done")
+			}
+			if err != nil {
+				return fmt.Errorf("error in stepping backup: %w", err)
+			}
+
+			err = b.Finish()
+			if err != nil {
+				return fmt.Errorf("error finishing backup: %w", err)
+			}
+
+			return err
+		})
+	})
 }

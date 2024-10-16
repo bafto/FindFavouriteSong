@@ -10,6 +10,7 @@ type Config struct {
 	Spotify_client_id     string            `mapstructure:"spotify_client_id"`
 	Spotify_client_secret string            `mapstructure:"spotify_client_secret"`
 	Datasource            string            `mapstructure:"data_source"`
+	BackupPath            string            `mapstructure:"backup_path"`
 	Port                  string            `mapstructure:"port"`
 	Log_level             string            `mapstructure:"log_level"`
 	Redirect_url          string            `mapstructure:"redirect_url"`
@@ -20,7 +21,8 @@ type Config struct {
 func read_config() (Config, error) {
 	viper.SetDefault("spotify_client_id", "")
 	viper.SetDefault("spotify_client_secret", "")
-	viper.SetDefault("db_path", "ffs.db")
+	viper.SetDefault("data_source", "file:ffs.db?_journal_mode=WAL")
+	viper.SetDefault("backup_path", "ffs.backup.db")
 	viper.SetDefault("port", "8080")
 	viper.SetDefault("log_level", "INFO")
 	viper.SetDefault("redirect_url", "http://localhost:8080/spotifyauthentication")
