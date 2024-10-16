@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Find Favourite Song</title>
+	<link rel="stylesheet" media="screen" href="/static/style.css">
+	<script>
+		function select_playlist(e) {
+			const data = new FormData();
+			data.append('playlist_url', e.getAttribute('playlist_url'));
+
+			fetch('/api/select_playlist', {
+				method: "POST",
+				body: data,
+			}).then(() => window.location.reload())
+		}
+	</script>
+</head>
+
+<body>
+	<header>
+		<h1>FindFavouriteSong</h1>
+	</header>
+
+	<main>
+		<h1>Enter the URL to your playlist</h1>
+		<form action="/api/select_playlist" method="POST">
+			<input type="text" name="playlist_url" placeholder="Enter URL">
+			<input type="submit" value="Submit">
+		</form>
+		<button onclick="window.location.href='/stats';">View your statistik</button>
+		{{ range . }}
+		<button onclick="select_playlist(this)" playlist_url="{{.Url}}">{{ .Name }}</button>
+		{{ end }}
+	</main>
+</body>
+
+</html>

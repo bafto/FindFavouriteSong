@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"net/url"
 	"path"
@@ -13,16 +14,15 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-	logger, user, tx, queries, ok := getLoggerUserTransactionQueries(w, r, s)
-	if !ok {
-		return
+func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
+	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
+	if err != nil {
+		return http.StatusInternalServerError, err
 	}
 	defer tx.Rollback()
 
 	if user.CurrentSession.Valid {
-		logAndErr(w, logger, "active session already exists", http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, fmt.Errorf("active session already exists")
 	}
 
 	// parse playlist url
@@ -30,16 +30,14 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 	logger.Debug("User selected playlist", "playlist-url", playlistUrl)
 	playlistId, err := getPlaylistIdFromURL(playlistUrl)
 	if err != nil {
-		logAndErr(w, logger, "could not parse spotify id from playlist url", http.StatusNotFound, "err", err)
-		return
+		return http.StatusNotFound, fmt.Errorf("could not parse spotify id from playlist url: %w", err)
 	}
 	logger.Debug("parsed playlist id", "playlist-id", playlistId)
 
 	// fetch playlist info
 	playlist, err := user.client.GetPlaylist(r.Context(), spotify.ID(playlistId))
 	if err != nil {
-		logAndErr(w, logger, "could not parse spotify id from playlist url", http.StatusNotFound, "err", err)
-		return
+		return http.StatusNotFound, fmt.Errorf("could not parse spotify id from playlist url: %w", err)
 	}
 
 	// add playlist to DB
@@ -48,22 +46,19 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		Name: notNull(playlist.Name),
 		Url:  notNull(playlistUrl),
 	}); err != nil {
-		logAndErr(w, logger, "could not insert playlist into db", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("could not insert playlist into db: %w", err)
 	}
 	if err := queries.AddPlaylistAddedByUser(r.Context(), db.AddPlaylistAddedByUserParams{
 		User:     user.ID,
 		Playlist: playlistId,
 	}); err != nil {
-		logAndErr(w, logger, "could not insert playlist_added_by_user into db", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("could not insert playlist_added_by_user into db: %w", err)
 	}
 
 	// fetch playlist items
 	playlistItems, err := getAllPlaylistItems(ctx, user.client, playlist.ID)
 	if err != nil {
-		logAndErr(w, logger, "could not load songs from playlist", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("could not load songs from playlist: %w", err)
 	}
 
 	// add playlist items to DB
@@ -76,8 +71,7 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 			Image:    notNull(getPlaylistItemImage(it)),
 			Playlist: playlistId,
 		}); err != nil {
-			logAndErr(w, logger, "could not insert playlist item into db", http.StatusInternalServerError, "err", err)
-			return
+			return http.StatusInternalServerError, fmt.Errorf("could not insert playlist item into db: %w", err)
 		}
 	}
 
@@ -87,7 +81,7 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		User:     user.ID,
 	})
 	if err != nil {
-		logAndErr(w, logger, "could not insert session into db", http.StatusInternalServerError, "err", err)
+		return http.StatusInternalServerError, fmt.Errorf("could not insert session into db: %w", err)
 	}
 	logger = logger.With("session-id", sessionID)
 	logger.Debug("created new session")
@@ -97,12 +91,11 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		CurrentSession: sql.NullInt64{Int64: sessionID, Valid: true},
 		ID:             user.ID,
 	}); err != nil {
-		logAndErr(w, logger, "could not set session for user", http.StatusInternalServerError, "err", err)
+		return http.StatusInternalServerError, fmt.Errorf("could not set session for user: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err)
 	}
 
 	user.CurrentSession = sql.NullInt64{Int64: sessionID, Valid: true}
@@ -110,6 +103,7 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 
 	logger.Debug("redirecting to /select_song")
 	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
+	return http.StatusTemporaryRedirect, nil
 }
 
 func getPlaylistIdFromURL(playlistUrl string) (string, error) {

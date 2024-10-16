@@ -11,17 +11,16 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-func statsPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-	logger, user, tx, queries, ok := getLoggerUserTransactionQueries(w, r, s)
-	if !ok {
-		return
+func statsPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
+	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
+	if err != nil {
+		return http.StatusInternalServerError, err
 	}
 	defer tx.Rollback()
 
 	winners, err := getWinnerMap(r.Context(), queries, user.ID)
 	if err != nil {
-		logAndErr(w, logger, "failed to get winners from db", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("failed to get winners from db: %w", err)
 	}
 	logger.Debug("retrieved winners from DB", "n-winners", len(winners))
 
@@ -30,6 +29,7 @@ func statsPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessio
 	})
 
 	statsHtml.Execute(w, winners)
+	return http.StatusOK, nil
 }
 
 type Winner struct {

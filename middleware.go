@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 )
 
@@ -15,10 +17,19 @@ func withPanicMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
 		defer func() {
 			if err := recover(); err != nil {
 				slog.Error("panic recovered in handler", "err", err, "url", r.URL, "stacktrace", string(debug.Stack()))
+				errorPage(w, fmt.Errorf("%v", err), http.StatusInternalServerError)
 			}
 		}()
 		nextHandler(w, r)
 	}
+}
+
+func errorPage(w http.ResponseWriter, err error, status int) {
+	errorHtml.Execute(w, map[string]any{
+		"error":       err.Error(),
+		"status":      status,
+		"status_text": http.StatusText(status),
+	})
 }
 
 type loggerkey struct{}
@@ -40,6 +51,7 @@ func withLoggingMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logger := slog.Default().With(
 			"ip", getIp(r),
+			"request-id", uuid.New(),
 		)
 
 		logger.Debug("Got a request", "url", r.URL)
@@ -47,67 +59,80 @@ func withLoggingMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func withAuthMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
+type ErrorHandlerFunc func(http.ResponseWriter, *http.Request) (int, error)
+
+func withErrorMiddleware(nextHandler ErrorHandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		logger := getLogger(r)
+		status, err := nextHandler(w, r)
+		if err != nil {
+			logger.Error("request handler returned error", "err", err, "status", status)
+			w.WriteHeader(status)
+			errorPage(w, err, status)
+		}
+	}
+}
+
+func withAuthMiddleware(nextHandler ErrorHandlerFunc) ErrorHandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) (int, error) {
 		logger := getLogger(r)
 
 		user, passwd, ok := r.BasicAuth()
 		if !ok {
 			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-			logAndErr(w, logger, "no BasicAuth header given", http.StatusUnauthorized)
-			return
+			return http.StatusUnauthorized, fmt.Errorf("no BasicAuth header given")
 		}
 
 		r = withLogger(r, logger.With("basic-auth-user", user))
 
 		if expectedPassword, ok := config.Users[user]; !ok || expectedPassword != passwd {
 			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
-			logAndErr(w, logger, "invalid password for user", http.StatusUnauthorized)
-			return
+			return http.StatusUnauthorized, fmt.Errorf("invalid password for user")
 		}
 
-		nextHandler(w, r)
+		return nextHandler(w, r)
 	}
 }
 
-type SessionHandlerFunc func(http.ResponseWriter, *http.Request, *sessions.Session)
+type SessionHandlerFunc func(http.ResponseWriter, *http.Request, *sessions.Session) (int, error)
 
-func withSessionMiddleware(nextHandler SessionHandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func withSessionMiddleware(nextHandler SessionHandlerFunc) ErrorHandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) (int, error) {
 		logger := getLogger(r)
 
 		session, err := sessionManager.Get(r, session_cookie)
 		if err != nil && !session.IsNew {
-			logAndErr(w, getLogger(r), "Could not decode session", http.StatusInternalServerError, "err", err)
-			return
+			return http.StatusInternalServerError, fmt.Errorf("Failed to decode session: %w", err)
 		}
 
-		if user, ok := getActiveUser(session); ok {
+		if user, err := getActiveUser(session); err == nil {
 			r = withLogger(r, logger.With("user-spotify-id", user.ID))
 		}
 
-		nextHandler(w, r, session)
+		return nextHandler(w, r, session)
 	}
 }
 
 func withTimerMiddleware(nextHandler SessionHandlerFunc) SessionHandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+	return func(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
 		defer func(start time.Time) {
 			logger := getLogger(r)
 			logger.Debug("request done", "took", time.Since(start))
 		}(time.Now())
-		nextHandler(w, r, s)
+		return nextHandler(w, r, s)
 	}
 }
 
 func withMiddleware(nextHandler SessionHandlerFunc) http.HandlerFunc {
 	return withPanicMiddleware(
 		withLoggingMiddleware(
-			withAuthMiddleware(
-				withSessionMiddleware(
-					withSpotifyAuthMiddleware(
-						withTimerMiddleware(
-							nextHandler,
+			withErrorMiddleware(
+				withAuthMiddleware(
+					withSessionMiddleware(
+						withSpotifyAuthMiddleware(
+							withTimerMiddleware(
+								nextHandler,
+							),
 						),
 					),
 				),

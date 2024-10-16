@@ -15,6 +15,7 @@ ENV TZ=Europe/Berlin
 
 COPY --from=build /app/FindFavouriteSong /app/FindFavouriteSong
 COPY select_songs.html select_playlist.html stats.html winner.html /app/
+COPY ./public /app/public
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

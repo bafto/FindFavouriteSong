@@ -1,16 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/bafto/FindFavouriteSong/db"
 	"github.com/gorilla/sessions"
 )
 
-func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-	logger, user, tx, queries, ok := getLoggerUserTransactionQueries(w, r, s)
-	if !ok {
-		return
+func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
+	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
+	if err != nil {
+		return http.StatusInternalServerError, err
 	}
 	defer tx.Rollback()
 
@@ -21,15 +22,13 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 
 	currentRound, err := queries.GetCurrentRound(r.Context(), sessionID)
 	if err != nil {
-		logAndErr(w, logger, "could not determine current round number from DB", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("could not determine current round number from DB: %w", err)
 	}
 
 	winnerID, loserID := r.FormValue("winner"), r.FormValue("loser")
 	logger = logger.With("winner-id", winnerID, "loser-id", loserID)
 	if winnerID == "" || loserID == "" {
-		logAndErr(w, logger, "winner or loser missing", http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, fmt.Errorf("winner or loser missing")
 	}
 
 	if err := queries.AddMatch(r.Context(), db.AddMatchParams{
@@ -38,21 +37,20 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 		Winner:      winnerID,
 		Loser:       loserID,
 	}); err != nil {
-		logAndErr(w, logger, "could not create match in db", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("could not create match in db: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err)
 	}
 	logger.Debug("inserted match into db")
+	return http.StatusOK, nil
 }
 
-func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-	logger, user, tx, queries, ok := getLoggerUserTransactionQueries(w, r, s)
-	if !ok {
-		return
+func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
+	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
+	if err != nil {
+		return http.StatusInternalServerError, err
 	}
 	defer tx.Rollback()
 
@@ -61,8 +59,7 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 
 	currentRound, err := queries.GetCurrentRound(r.Context(), sessionID)
 	if err != nil {
-		logAndErr(w, logger, "could not determine current round number from DB", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("could not determine current round number from DB: %w", err)
 	}
 
 	nextPair, err := queries.GetNextPair(r.Context(), db.GetNextPairParams{
@@ -70,8 +67,7 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		RoundNumber: currentRound,
 	})
 	if err != nil {
-		logAndErr(w, logger, "error getting next pair from DB", http.StatusInternalServerError, "err", err)
-		return
+		return http.StatusInternalServerError, fmt.Errorf("error getting next pair from DB: %w", err)
 	}
 	// default case is 2 where we don't have to do anything
 	if len(nextPair) != 2 {
@@ -80,8 +76,7 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 			ID:           sessionID,
 			CurrentRound: currentRound,
 		}); err != nil {
-			logAndErr(w, logger, "error updating current_round in DB", http.StatusInternalServerError, "err", err)
-			return
+			return http.StatusInternalServerError, fmt.Errorf("error updating current_round in DB: %w", err)
 		}
 
 		nextPair, err = queries.GetNextPair(r.Context(), db.GetNextPairParams{
@@ -89,8 +84,7 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 			RoundNumber: currentRound,
 		})
 		if err != nil {
-			logAndErr(w, logger, "error getting next pair from DB", http.StatusInternalServerError, "err", err)
-			return
+			return http.StatusInternalServerError, fmt.Errorf("error getting next pair from DB: %w", err)
 		}
 
 		switch len(nextPair) {
@@ -104,23 +98,20 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 				Winner: notNull(winnerID),
 				ID:     sessionID,
 			}); err != nil {
-				logAndErr(w, logger, "failed to set winner in DB", http.StatusInternalServerError, "err", err)
-				return
+				return http.StatusInternalServerError, fmt.Errorf("failed to set winner in DB: %w", err)
 			}
 
-			if err := tx.Commit(); err != nil {
-				logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
-				return
+			if status, err := commitTransaction(tx); err != nil {
+				return status, err
 			}
 			logger.Debug("redirecting to /winner")
 			http.Redirect(w, r, "/winner?winner="+winnerID, http.StatusTemporaryRedirect)
-			return
+			return http.StatusTemporaryRedirect, nil
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
-		return
+	if status, err := commitTransaction(tx); err != nil {
+		return status, err
 	}
 
 	selectSongsHtml.Execute(w, map[string]string{
@@ -133,4 +124,5 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		"Song2_Image":   nextPair[1].Image.String,
 		"Song2_ID":      nextPair[1].ID,
 	})
+	return http.StatusOK, nil
 }

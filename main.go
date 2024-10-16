@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -50,10 +51,11 @@ type ActiveUser struct {
 var (
 	config Config
 
-	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.html"))
-	selectPlaylistHtml = template.Must(template.ParseFiles("select_playlist.html"))
-	winnerHtml         = template.Must(template.ParseFiles("winner.html"))
-	statsHtml          = template.Must(template.ParseFiles("stats.html"))
+	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.gohtml"))
+	selectPlaylistHtml = template.Must(template.ParseFiles("select_playlist.gohtml"))
+	winnerHtml         = template.Must(template.ParseFiles("winner.gohtml"))
+	statsHtml          = template.Must(template.ParseFiles("stats.gohtml"))
+	errorHtml          = template.Must(template.ParseFiles("error.gohtml"))
 
 	ctx     = context.Background()
 	db_conn *sql.DB
@@ -107,6 +109,8 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./public"))))
+
 	mux.HandleFunc("/", withMiddleware(defaultHandler))
 	mux.HandleFunc("/spotifyauthentication", withMiddleware(authHandler))
 	mux.HandleFunc("POST /api/select_playlist", withMiddleware(selectPlaylistHandler))
@@ -142,13 +146,12 @@ func main() {
 	slog.Info("server shutdown gracefully")
 }
 
-func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
+func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
 	logger := getLogger(r)
 
-	user, ok := getActiveUser(s)
-	if !ok {
-		logAndErr(w, logger, "error retrieving user", http.StatusInternalServerError)
-		return
+	user, err := getActiveUser(s)
+	if err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("error retrieving user: %w", err)
 	}
 
 	if !user.CurrentSession.Valid {
@@ -156,48 +159,44 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 
 		playlists, err := queries.GetPlaylistsForUser(r.Context(), user.ID)
 		if err != nil {
-			logAndErr(w, logger, "Error loading playlists for user", http.StatusInternalServerError, "err", err)
-			return
+			return http.StatusInternalServerError, fmt.Errorf("Error loading playlist for user: %w", err)
 		}
 
 		selectPlaylistHtml.Execute(w, mapPlaylists(playlists))
-		return
+		return http.StatusOK, nil
 	}
 
 	logger.Debug("redirecting to /select_song")
 	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
+	return http.StatusTemporaryRedirect, nil
 }
 
-func winnerHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) {
-	logger, user, tx, queries, ok := getLoggerUserTransactionQueries(w, r, s)
-	if !ok {
-		return
+func winnerHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
+	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
+	if err != nil {
+		return http.StatusInternalServerError, err
 	}
 	defer tx.Rollback()
 
 	winnerID := r.FormValue("winner")
 	if winnerID == "" {
-		logAndErr(w, logger, "no winner provided", http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, fmt.Errorf("no winner provided in form")
 	}
 
 	winnerItem, err := queries.GetPlaylistItem(r.Context(), winnerID)
 	if err != nil {
-		logAndErr(w, logger, "winner not found in DB", http.StatusBadRequest, "err", err)
-		return
+		return http.StatusBadRequest, fmt.Errorf("winner not found in DB: %w", err)
 	}
 
 	if err := queries.SetUserSession(r.Context(), db.SetUserSessionParams{
 		ID:             user.ID,
 		CurrentSession: sql.NullInt64{Valid: false},
 	}); err != nil {
-		logAndErr(w, logger, "unable to reset current session in DB", http.StatusBadRequest, "err", err)
-		return
+		return http.StatusBadRequest, fmt.Errorf("unable to reset current session in DB: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		logAndErr(w, logger, "failed to commit DB transaction", http.StatusInternalServerError, "err", err)
-		return
+	if status, err := commitTransaction(tx); err != nil {
+		return status, err
 	}
 	user.CurrentSession.Valid = false
 	logger.Debug("reset user session to NULL")
@@ -207,45 +206,43 @@ func winnerHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) 
 		"Title":   winnerItem.Title.String,
 		"Artists": winnerItem.Artists.String,
 	})
+	return http.StatusOK, nil
 }
 
 func getIp(r *http.Request) string {
 	return strings.Split(r.RemoteAddr, ":")[0]
 }
 
-func getActiveUser(session *sessions.Session) (*ActiveUser, bool) {
+func getActiveUser(session *sessions.Session) (*ActiveUser, error) {
 	userID, ok := session.Values[session_id_key]
 	if !ok {
-		return nil, false
+		return nil, fmt.Errorf("User ID not found in session")
 	}
-	return activeUserMap.Load(userID.(string))
+	user, ok := activeUserMap.Load(userID.(string))
+	if !ok {
+		return nil, fmt.Errorf("User not in activeuserMap")
+	}
+	return user, nil
 }
 
-func getLoggerUserTransactionQueries(w http.ResponseWriter, r *http.Request, s *sessions.Session) (*slog.Logger, *ActiveUser, *sql.Tx, *db.Queries, bool) {
+func getLoggerUserTransactionQueries(w http.ResponseWriter, r *http.Request, s *sessions.Session) (*slog.Logger, *ActiveUser, *sql.Tx, *db.Queries, error) {
 	logger := getLogger(r)
 
-	user, ok := getActiveUser(s)
-	if !ok {
-		logAndErr(w, logger, "no user found", http.StatusInternalServerError)
-		return logger, nil, nil, nil, false
+	user, err := getActiveUser(s)
+	if err != nil {
+		return logger, nil, nil, nil, fmt.Errorf("failed to get activeUser, user not found: %w", err)
 	}
 
 	tx, err := db_conn.BeginTx(r.Context(), nil)
 	if err != nil {
-		logAndErr(w, logger, "failed to create DB transaction", http.StatusInternalServerError, "err", err)
-		return logger, user, nil, nil, false
+		return logger, user, nil, nil, fmt.Errorf("failed to create DB transaction: %w", err)
 	}
 
-	return logger, user, tx, queries.WithTx(tx), true
+	return logger, user, tx, queries.WithTx(tx), nil
 }
 
 func notNull(s string) sql.NullString {
 	return sql.NullString{String: s, Valid: true}
-}
-
-func logAndErr(w http.ResponseWriter, logger *slog.Logger, msg string, status int, args ...any) {
-	logger.Error(msg, args...)
-	http.Error(w, msg, status)
 }
 
 type TemplatePlaylist struct {
@@ -261,4 +258,11 @@ func mapPlaylists(playlists []db.Playlist) []TemplatePlaylist {
 		}
 	}
 	return result
+}
+
+func commitTransaction(tx *sql.Tx) (int, error) {
+	if err := tx.Commit(); err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err)
+	}
+	return -1, nil
 }
