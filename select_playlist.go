@@ -64,6 +64,11 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 	// add playlist items to DB
 	for i := range playlistItems {
 		it := &playlistItems[i]
+		has_valid_spotif_id := true
+		if it.Track.Track.ID == "" {
+			it.Track.Track.ID = spotify.ID(it.Track.Track.Name + artistsToString(it.Track.Track.Artists))[:22]
+			has_valid_spotif_id = false
+		}
 		if err := queries.AddOrUpdatePlaylistItem(r.Context(), db.AddOrUpdatePlaylistItemParams{
 			ID:       string(it.Track.Track.ID),
 			Title:    notNull(it.Track.Track.Name),
