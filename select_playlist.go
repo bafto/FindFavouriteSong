@@ -70,11 +70,12 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 			has_valid_spotif_id = false
 		}
 		if err := queries.AddOrUpdatePlaylistItem(r.Context(), db.AddOrUpdatePlaylistItemParams{
-			ID:       string(it.Track.Track.ID),
-			Title:    notNull(it.Track.Track.Name),
-			Artists:  notNull(artistsToString(it.Track.Track.Artists)),
-			Image:    notNull(getPlaylistItemImage(it)),
-			Playlist: playlistId,
+			ID:                string(it.Track.Track.ID),
+			Title:             notNull(it.Track.Track.Name),
+			Artists:           notNull(artistsToString(it.Track.Track.Artists)),
+			Image:             notNull(getPlaylistItemImage(it)),
+			Playlist:          playlistId,
+			HasValidSpotifyID: int64(boolToInt(has_valid_spotif_id)),
 		}); err != nil {
 			return http.StatusInternalServerError, fmt.Errorf("could not insert playlist item into db: %w", err)
 		}
@@ -158,4 +159,11 @@ func getPlaylistItemImage(item *spotify.PlaylistItem) string {
 		img = item.Track.Track.Album.Images[1].URL
 	}
 	return img
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

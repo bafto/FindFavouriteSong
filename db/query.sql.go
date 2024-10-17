@@ -50,15 +50,16 @@ func (q *Queries) AddOrUpdatePlaylist(ctx context.Context, arg AddOrUpdatePlayli
 
 const addOrUpdatePlaylistItem = `-- name: AddOrUpdatePlaylistItem :exec
 INSERT OR REPLACE INTO playlist_item
-(id, title, artists, image, playlist) VALUES (?, ?, ?, ?, ?)
+(id, title, artists, image, playlist, has_valid_spotify_id) VALUES (?, ?, ?, ?, ?, ?)
 `
 
 type AddOrUpdatePlaylistItemParams struct {
-	ID       string
-	Title    sql.NullString
-	Artists  sql.NullString
-	Image    sql.NullString
-	Playlist string
+	ID                string
+	Title             sql.NullString
+	Artists           sql.NullString
+	Image             sql.NullString
+	Playlist          string
+	HasValidSpotifyID int64
 }
 
 func (q *Queries) AddOrUpdatePlaylistItem(ctx context.Context, arg AddOrUpdatePlaylistItemParams) error {
@@ -68,6 +69,7 @@ func (q *Queries) AddOrUpdatePlaylistItem(ctx context.Context, arg AddOrUpdatePl
 		arg.Artists,
 		arg.Image,
 		arg.Playlist,
+		arg.HasValidSpotifyID,
 	)
 	return err
 }
@@ -166,7 +168,7 @@ already_won_this_round AS (
 	SELECT m.winner FROM match m
 	WHERE m.session = ?1 AND m.round_number = ?2
 )
-SELECT id, title, artists, image, playlist FROM playlist_item
+SELECT id, title, artists, image, playlist, has_valid_spotify_id FROM playlist_item
 WHERE id NOT IN already_lost_this_session AND id NOT IN already_won_this_round
 ORDER BY RANDOM() DESC LIMIT 2
 `
@@ -191,6 +193,7 @@ func (q *Queries) GetNextPair(ctx context.Context, arg GetNextPairParams) ([]Pla
 			&i.Artists,
 			&i.Image,
 			&i.Playlist,
+			&i.HasValidSpotifyID,
 		); err != nil {
 			return nil, err
 		}
@@ -218,7 +221,7 @@ func (q *Queries) GetPlaylist(ctx context.Context, id string) (Playlist, error) 
 }
 
 const getPlaylistItem = `-- name: GetPlaylistItem :one
-SELECT id, title, artists, image, playlist FROM playlist_item
+SELECT id, title, artists, image, playlist, has_valid_spotify_id FROM playlist_item
 WHERE id = ?
 `
 
@@ -231,6 +234,7 @@ func (q *Queries) GetPlaylistItem(ctx context.Context, id string) (PlaylistItem,
 		&i.Artists,
 		&i.Image,
 		&i.Playlist,
+		&i.HasValidSpotifyID,
 	)
 	return i, err
 }

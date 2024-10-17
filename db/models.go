@@ -28,11 +28,12 @@ type PlaylistAddedByUser struct {
 }
 
 type PlaylistItem struct {
-	ID       string
-	Title    sql.NullString
-	Artists  sql.NullString
-	Image    sql.NullString
-	Playlist string
+	ID                string
+	Title             sql.NullString
+	Artists           sql.NullString
+	Image             sql.NullString
+	Playlist          string
+	HasValidSpotifyID int64
 }
 
 type Session struct {

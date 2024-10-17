@@ -12,7 +12,7 @@ WHERE id = ?;
 
 -- name: AddOrUpdatePlaylistItem :exec
 INSERT OR REPLACE INTO playlist_item
-(id, title, artists, image, playlist) VALUES (?, ?, ?, ?, ?);
+(id, title, artists, image, playlist, has_valid_spotify_id) VALUES (?, ?, ?, ?, ?, ?);
 
 -- name: AddUser :one
 INSERT OR IGNORE INTO user (id, current_session) VALUES (?, NULL)
