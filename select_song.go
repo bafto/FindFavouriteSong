@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/bafto/FindFavouriteSong/db"
 	"github.com/gorilla/sessions"
@@ -116,7 +117,7 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 			logger.Debug("reset user session to NULL")
 
 			logger.Debug("redirecting to /winner")
-			http.Redirect(w, r, "/winner?winner="+winnerID, http.StatusTemporaryRedirect)
+			http.Redirect(w, r, "/winner?winner="+url.QueryEscape(winnerID), http.StatusTemporaryRedirect)
 			return http.StatusTemporaryRedirect, nil
 		}
 	}
