@@ -56,15 +56,19 @@ WHERE id = ?;
 
 -- name: GetNextPair :many
 WITH already_lost_this_session AS (
-	SELECT m.loser FROM match m
-	WHERE m.session = sqlc.arg(session)
+	SELECT loser FROM match
+	WHERE session = sqlc.arg(session)
 ),
 already_won_this_round AS (
-	SELECT m.winner FROM match m
+	SELECT m.winner AS winner FROM match m
 	WHERE m.session = sqlc.arg(session) AND m.round_number = sqlc.arg(round_number)
 )
-SELECT * FROM playlist_item
-WHERE id NOT IN already_lost_this_session AND id NOT IN already_won_this_round
+SELECT item.* FROM 
+playlist_item item 
+INNER JOIN playlist_item_belongs_to_playlist belongs ON item.id = belongs.playlist_item
+INNER JOIN session s ON s.playlist = belongs.playlist
+WHERE s.id = sqlc.arg(session) AND
+item.id NOT IN already_lost_this_session AND item.id NOT IN already_won_this_round
 ORDER BY RANDOM() DESC LIMIT 2;
 
 -- name: AddMatch :exec

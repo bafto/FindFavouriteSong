@@ -174,15 +174,19 @@ func (q *Queries) GetCurrentRound(ctx context.Context, id int64) (int64, error) 
 
 const getNextPair = `-- name: GetNextPair :many
 WITH already_lost_this_session AS (
-	SELECT m.loser FROM match m
-	WHERE m.session = ?1
+	SELECT loser FROM match
+	WHERE session = ?1
 ),
 already_won_this_round AS (
-	SELECT m.winner FROM match m
+	SELECT m.winner AS winner FROM match m
 	WHERE m.session = ?1 AND m.round_number = ?2
 )
-SELECT id, title, artists, image, has_valid_spotify_id FROM playlist_item
-WHERE id NOT IN already_lost_this_session AND id NOT IN already_won_this_round
+SELECT item.id, item.title, item.artists, item.image, item.has_valid_spotify_id FROM 
+playlist_item item 
+INNER JOIN playlist_item_belongs_to_playlist belongs ON item.id = belongs.playlist_item
+INNER JOIN session s ON s.playlist = belongs.playlist
+WHERE s.id = ?1 AND
+item.id NOT IN already_lost_this_session AND item.id NOT IN already_won_this_round
 ORDER BY RANDOM() DESC LIMIT 2
 `
 
