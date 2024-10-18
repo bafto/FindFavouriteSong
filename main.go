@@ -172,12 +172,6 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 }
 
 func winnerHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
-	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-	defer tx.Rollback()
-
 	winnerID := r.FormValue("winner")
 	if winnerID == "" {
 		return http.StatusBadRequest, fmt.Errorf("no winner provided in form")
@@ -187,19 +181,6 @@ func winnerHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) 
 	if err != nil {
 		return http.StatusBadRequest, fmt.Errorf("winner not found in DB: %w", err)
 	}
-
-	if err := queries.SetUserSession(r.Context(), db.SetUserSessionParams{
-		ID:             user.ID,
-		CurrentSession: sql.NullInt64{Valid: false},
-	}); err != nil {
-		return http.StatusBadRequest, fmt.Errorf("unable to reset current session in DB: %w", err)
-	}
-
-	if status, err := commitTransaction(tx); err != nil {
-		return status, err
-	}
-	user.CurrentSession.Valid = false
-	logger.Debug("reset user session to NULL")
 
 	winnerHtml.Execute(w, map[string]string{
 		"Image":   winnerItem.Image.String,

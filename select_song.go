@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -101,9 +102,19 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 				return http.StatusInternalServerError, fmt.Errorf("failed to set winner in DB: %w", err)
 			}
 
+			if err := queries.SetUserSession(r.Context(), db.SetUserSessionParams{
+				ID:             user.ID,
+				CurrentSession: sql.NullInt64{Valid: false},
+			}); err != nil {
+				return http.StatusBadRequest, fmt.Errorf("unable to reset current session in DB: %w", err)
+			}
+
 			if status, err := commitTransaction(tx); err != nil {
 				return status, err
 			}
+			user.CurrentSession.Valid = false
+			logger.Debug("reset user session to NULL")
+
 			logger.Debug("redirecting to /winner")
 			http.Redirect(w, r, "/winner?winner="+winnerID, http.StatusTemporaryRedirect)
 			return http.StatusTemporaryRedirect, nil
