@@ -50,7 +50,7 @@ func (q *Queries) AddOrUpdatePlaylist(ctx context.Context, arg AddOrUpdatePlayli
 
 const addOrUpdatePlaylistItem = `-- name: AddOrUpdatePlaylistItem :exec
 INSERT OR REPLACE INTO playlist_item
-(id, title, artists, image, playlist, has_valid_spotify_id) VALUES (?, ?, ?, ?, ?, ?)
+(id, title, artists, image, has_valid_spotify_id) VALUES (?, ?, ?, ?, ?)
 `
 
 type AddOrUpdatePlaylistItemParams struct {
@@ -58,7 +58,6 @@ type AddOrUpdatePlaylistItemParams struct {
 	Title             sql.NullString
 	Artists           sql.NullString
 	Image             sql.NullString
-	Playlist          string
 	HasValidSpotifyID int64
 }
 
@@ -68,7 +67,6 @@ func (q *Queries) AddOrUpdatePlaylistItem(ctx context.Context, arg AddOrUpdatePl
 		arg.Title,
 		arg.Artists,
 		arg.Image,
-		arg.Playlist,
 		arg.HasValidSpotifyID,
 	)
 	return err
@@ -86,6 +84,21 @@ type AddPlaylistAddedByUserParams struct {
 
 func (q *Queries) AddPlaylistAddedByUser(ctx context.Context, arg AddPlaylistAddedByUserParams) error {
 	_, err := q.exec(ctx, q.addPlaylistAddedByUserStmt, addPlaylistAddedByUser, arg.User, arg.Playlist)
+	return err
+}
+
+const addPlaylistItemBelongsToPlaylist = `-- name: AddPlaylistItemBelongsToPlaylist :exec
+INSERT OR IGNORE INTO playlist_item_belongs_to_playlist
+(playlist_item, playlist) VALUES (?, ?)
+`
+
+type AddPlaylistItemBelongsToPlaylistParams struct {
+	PlaylistItem string
+	Playlist     string
+}
+
+func (q *Queries) AddPlaylistItemBelongsToPlaylist(ctx context.Context, arg AddPlaylistItemBelongsToPlaylistParams) error {
+	_, err := q.exec(ctx, q.addPlaylistItemBelongsToPlaylistStmt, addPlaylistItemBelongsToPlaylist, arg.PlaylistItem, arg.Playlist)
 	return err
 }
 
@@ -168,7 +181,7 @@ already_won_this_round AS (
 	SELECT m.winner FROM match m
 	WHERE m.session = ?1 AND m.round_number = ?2
 )
-SELECT id, title, artists, image, playlist, has_valid_spotify_id FROM playlist_item
+SELECT id, title, artists, image, has_valid_spotify_id FROM playlist_item
 WHERE id NOT IN already_lost_this_session AND id NOT IN already_won_this_round
 ORDER BY RANDOM() DESC LIMIT 2
 `
@@ -192,7 +205,6 @@ func (q *Queries) GetNextPair(ctx context.Context, arg GetNextPairParams) ([]Pla
 			&i.Title,
 			&i.Artists,
 			&i.Image,
-			&i.Playlist,
 			&i.HasValidSpotifyID,
 		); err != nil {
 			return nil, err
@@ -221,7 +233,7 @@ func (q *Queries) GetPlaylist(ctx context.Context, id string) (Playlist, error) 
 }
 
 const getPlaylistItem = `-- name: GetPlaylistItem :one
-SELECT id, title, artists, image, playlist, has_valid_spotify_id FROM playlist_item
+SELECT id, title, artists, image, has_valid_spotify_id FROM playlist_item
 WHERE id = ?
 `
 
@@ -233,7 +245,6 @@ func (q *Queries) GetPlaylistItem(ctx context.Context, id string) (PlaylistItem,
 		&i.Title,
 		&i.Artists,
 		&i.Image,
-		&i.Playlist,
 		&i.HasValidSpotifyID,
 	)
 	return i, err

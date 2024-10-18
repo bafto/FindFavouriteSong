@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS playlist_item (
 	title varchar(64),
 	artists varchar(64), -- comma separated list of artists
 	image varchar(64), -- URL to the image
-	playlist varchar(22) NOT NULL REFERENCES playlist
+	playlist varchar(22) NOT NULL REFERENCES playlist -- deprectaed, removed in V004
 );
 
 CREATE TABLE IF NOT EXISTS session (

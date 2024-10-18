@@ -12,7 +12,7 @@ WHERE id = ?;
 
 -- name: AddOrUpdatePlaylistItem :exec
 INSERT OR REPLACE INTO playlist_item
-(id, title, artists, image, playlist, has_valid_spotify_id) VALUES (?, ?, ?, ?, ?, ?);
+(id, title, artists, image, has_valid_spotify_id) VALUES (?, ?, ?, ?, ?);
 
 -- name: AddUser :one
 INSERT OR IGNORE INTO user (id, current_session) VALUES (?, NULL)
@@ -78,3 +78,7 @@ INSERT OR IGNORE INTO playlist_added_by_user
 -- name: GetPlaylistsForUser :many
 SELECT p.* FROM playlist_added_by_user pa, playlist p
 WHERE pa.user = ? AND p.id = pa.playlist;
+
+-- name: AddPlaylistItemBelongsToPlaylist :exec
+INSERT OR IGNORE INTO playlist_item_belongs_to_playlist
+(playlist_item, playlist) VALUES (?, ?);

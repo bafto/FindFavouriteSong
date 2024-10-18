@@ -32,8 +32,12 @@ type PlaylistItem struct {
 	Title             sql.NullString
 	Artists           sql.NullString
 	Image             sql.NullString
-	Playlist          string
 	HasValidSpotifyID int64
+}
+
+type PlaylistItemBelongsToPlaylist struct {
+	PlaylistItem string
+	Playlist     string
 }
 
 type Session struct {

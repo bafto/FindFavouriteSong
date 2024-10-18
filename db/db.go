@@ -36,6 +36,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addPlaylistAddedByUserStmt, err = db.PrepareContext(ctx, addPlaylistAddedByUser); err != nil {
 		return nil, fmt.Errorf("error preparing query AddPlaylistAddedByUser: %w", err)
 	}
+	if q.addPlaylistItemBelongsToPlaylistStmt, err = db.PrepareContext(ctx, addPlaylistItemBelongsToPlaylist); err != nil {
+		return nil, fmt.Errorf("error preparing query AddPlaylistItemBelongsToPlaylist: %w", err)
+	}
 	if q.addSessionStmt, err = db.PrepareContext(ctx, addSession); err != nil {
 		return nil, fmt.Errorf("error preparing query AddSession: %w", err)
 	}
@@ -98,6 +101,11 @@ func (q *Queries) Close() error {
 	if q.addPlaylistAddedByUserStmt != nil {
 		if cerr := q.addPlaylistAddedByUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addPlaylistAddedByUserStmt: %w", cerr)
+		}
+	}
+	if q.addPlaylistItemBelongsToPlaylistStmt != nil {
+		if cerr := q.addPlaylistItemBelongsToPlaylistStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addPlaylistItemBelongsToPlaylistStmt: %w", cerr)
 		}
 	}
 	if q.addSessionStmt != nil {
@@ -202,47 +210,49 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                          DBTX
-	tx                          *sql.Tx
-	addMatchStmt                *sql.Stmt
-	addOrUpdatePlaylistStmt     *sql.Stmt
-	addOrUpdatePlaylistItemStmt *sql.Stmt
-	addPlaylistAddedByUserStmt  *sql.Stmt
-	addSessionStmt              *sql.Stmt
-	addUserStmt                 *sql.Stmt
-	getAllWinnersForUserStmt    *sql.Stmt
-	getCurrentRoundStmt         *sql.Stmt
-	getNextPairStmt             *sql.Stmt
-	getPlaylistStmt             *sql.Stmt
-	getPlaylistItemStmt         *sql.Stmt
-	getPlaylistsForUserStmt     *sql.Stmt
-	getUserStmt                 *sql.Stmt
-	getWinnerStmt               *sql.Stmt
-	setCurrentRoundStmt         *sql.Stmt
-	setUserSessionStmt          *sql.Stmt
-	setWinnerStmt               *sql.Stmt
+	db                                   DBTX
+	tx                                   *sql.Tx
+	addMatchStmt                         *sql.Stmt
+	addOrUpdatePlaylistStmt              *sql.Stmt
+	addOrUpdatePlaylistItemStmt          *sql.Stmt
+	addPlaylistAddedByUserStmt           *sql.Stmt
+	addPlaylistItemBelongsToPlaylistStmt *sql.Stmt
+	addSessionStmt                       *sql.Stmt
+	addUserStmt                          *sql.Stmt
+	getAllWinnersForUserStmt             *sql.Stmt
+	getCurrentRoundStmt                  *sql.Stmt
+	getNextPairStmt                      *sql.Stmt
+	getPlaylistStmt                      *sql.Stmt
+	getPlaylistItemStmt                  *sql.Stmt
+	getPlaylistsForUserStmt              *sql.Stmt
+	getUserStmt                          *sql.Stmt
+	getWinnerStmt                        *sql.Stmt
+	setCurrentRoundStmt                  *sql.Stmt
+	setUserSessionStmt                   *sql.Stmt
+	setWinnerStmt                        *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                          tx,
-		tx:                          tx,
-		addMatchStmt:                q.addMatchStmt,
-		addOrUpdatePlaylistStmt:     q.addOrUpdatePlaylistStmt,
-		addOrUpdatePlaylistItemStmt: q.addOrUpdatePlaylistItemStmt,
-		addPlaylistAddedByUserStmt:  q.addPlaylistAddedByUserStmt,
-		addSessionStmt:              q.addSessionStmt,
-		addUserStmt:                 q.addUserStmt,
-		getAllWinnersForUserStmt:    q.getAllWinnersForUserStmt,
-		getCurrentRoundStmt:         q.getCurrentRoundStmt,
-		getNextPairStmt:             q.getNextPairStmt,
-		getPlaylistStmt:             q.getPlaylistStmt,
-		getPlaylistItemStmt:         q.getPlaylistItemStmt,
-		getPlaylistsForUserStmt:     q.getPlaylistsForUserStmt,
-		getUserStmt:                 q.getUserStmt,
-		getWinnerStmt:               q.getWinnerStmt,
-		setCurrentRoundStmt:         q.setCurrentRoundStmt,
-		setUserSessionStmt:          q.setUserSessionStmt,
-		setWinnerStmt:               q.setWinnerStmt,
+		db:                                   tx,
+		tx:                                   tx,
+		addMatchStmt:                         q.addMatchStmt,
+		addOrUpdatePlaylistStmt:              q.addOrUpdatePlaylistStmt,
+		addOrUpdatePlaylistItemStmt:          q.addOrUpdatePlaylistItemStmt,
+		addPlaylistAddedByUserStmt:           q.addPlaylistAddedByUserStmt,
+		addPlaylistItemBelongsToPlaylistStmt: q.addPlaylistItemBelongsToPlaylistStmt,
+		addSessionStmt:                       q.addSessionStmt,
+		addUserStmt:                          q.addUserStmt,
+		getAllWinnersForUserStmt:             q.getAllWinnersForUserStmt,
+		getCurrentRoundStmt:                  q.getCurrentRoundStmt,
+		getNextPairStmt:                      q.getNextPairStmt,
+		getPlaylistStmt:                      q.getPlaylistStmt,
+		getPlaylistItemStmt:                  q.getPlaylistItemStmt,
+		getPlaylistsForUserStmt:              q.getPlaylistsForUserStmt,
+		getUserStmt:                          q.getUserStmt,
+		getWinnerStmt:                        q.getWinnerStmt,
+		setCurrentRoundStmt:                  q.setCurrentRoundStmt,
+		setUserSessionStmt:                   q.setUserSessionStmt,
+		setWinnerStmt:                        q.setWinnerStmt,
 	}
 }
