@@ -65,7 +65,7 @@ func prepareNewSession(ctx context.Context, logger *slog.Logger, user *ActiveUse
 	logger.Debug("created new session")
 
 	if err := queries.InitializePossibleNextItemsForSession(ctx, db.InitializePossibleNextItemsForSessionParams{
-		Session: sessionID,
+		Session:  sessionID,
 		Playlist: playlistId,
 	}); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("could not initialize possible_next_items: %w", err)
@@ -87,7 +87,7 @@ func prepareNewSession(ctx context.Context, logger *slog.Logger, user *ActiveUse
 	user.CurrentSession = sql.NullInt64{Int64: sessionID, Valid: true}
 	logger.Info("added session to user")
 
-	 return -1, nil
+	return -1, nil
 }
 
 // helper function for selectPlaylistHandler
@@ -124,7 +124,7 @@ func addPlaylistToDB(ctx context.Context, logger *slog.Logger, user *ActiveUser,
 		it := &playlistItems[i]
 		has_valid_spotif_id := true
 		if it.Track.Track.ID == "" {
-			it.Track.Track.ID = spotify.ID(it.Track.Track.Name + artistsToString(it.Track.Track.Artists))[:22]
+			it.Track.Track.ID = spotify.ID(strings.ReplaceAll(it.Track.Track.Name+artistsToString(it.Track.Track.Artists), " ", "_"))[:22]
 			has_valid_spotif_id = false
 		}
 
