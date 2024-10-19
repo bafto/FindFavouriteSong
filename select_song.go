@@ -65,8 +65,8 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 	}
 
 	nextPair, err := queries.GetNextPair(r.Context(), db.GetNextPairParams{
-		Session:     sessionID,
-		RoundNumber: currentRound,
+		Session:      sessionID,
+		CurrentRound: currentRound,
 	})
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("error getting next pair from DB: %w", err)
@@ -82,8 +82,8 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		}
 
 		nextPair, err = queries.GetNextPair(r.Context(), db.GetNextPairParams{
-			Session:     sessionID,
-			RoundNumber: currentRound,
+			Session:      sessionID,
+			CurrentRound: currentRound,
 		})
 		if err != nil {
 			return http.StatusInternalServerError, fmt.Errorf("error getting next pair from DB: %w", err)

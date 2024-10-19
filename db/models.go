@@ -40,6 +40,13 @@ type PlaylistItemBelongsToPlaylist struct {
 	Playlist     string
 }
 
+type PossibleNextItem struct {
+	Session      int64
+	PlaylistItem string
+	Lost         int64
+	WonRound     int64
+}
+
 type Session struct {
 	ID           int64
 	Playlist     string

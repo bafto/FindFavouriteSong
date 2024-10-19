@@ -69,6 +69,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getWinnerStmt, err = db.PrepareContext(ctx, getWinner); err != nil {
 		return nil, fmt.Errorf("error preparing query GetWinner: %w", err)
 	}
+	if q.initializePossibleNextItemsForSessionStmt, err = db.PrepareContext(ctx, initializePossibleNextItemsForSession); err != nil {
+		return nil, fmt.Errorf("error preparing query InitializePossibleNextItemsForSession: %w", err)
+	}
 	if q.setCurrentRoundStmt, err = db.PrepareContext(ctx, setCurrentRound); err != nil {
 		return nil, fmt.Errorf("error preparing query SetCurrentRound: %w", err)
 	}
@@ -158,6 +161,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getWinnerStmt: %w", cerr)
 		}
 	}
+	if q.initializePossibleNextItemsForSessionStmt != nil {
+		if cerr := q.initializePossibleNextItemsForSessionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing initializePossibleNextItemsForSessionStmt: %w", cerr)
+		}
+	}
 	if q.setCurrentRoundStmt != nil {
 		if cerr := q.setCurrentRoundStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing setCurrentRoundStmt: %w", cerr)
@@ -210,26 +218,27 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                                   DBTX
-	tx                                   *sql.Tx
-	addMatchStmt                         *sql.Stmt
-	addOrUpdatePlaylistStmt              *sql.Stmt
-	addOrUpdatePlaylistItemStmt          *sql.Stmt
-	addPlaylistAddedByUserStmt           *sql.Stmt
-	addPlaylistItemBelongsToPlaylistStmt *sql.Stmt
-	addSessionStmt                       *sql.Stmt
-	addUserStmt                          *sql.Stmt
-	getAllWinnersForUserStmt             *sql.Stmt
-	getCurrentRoundStmt                  *sql.Stmt
-	getNextPairStmt                      *sql.Stmt
-	getPlaylistStmt                      *sql.Stmt
-	getPlaylistItemStmt                  *sql.Stmt
-	getPlaylistsForUserStmt              *sql.Stmt
-	getUserStmt                          *sql.Stmt
-	getWinnerStmt                        *sql.Stmt
-	setCurrentRoundStmt                  *sql.Stmt
-	setUserSessionStmt                   *sql.Stmt
-	setWinnerStmt                        *sql.Stmt
+	db                                        DBTX
+	tx                                        *sql.Tx
+	addMatchStmt                              *sql.Stmt
+	addOrUpdatePlaylistStmt                   *sql.Stmt
+	addOrUpdatePlaylistItemStmt               *sql.Stmt
+	addPlaylistAddedByUserStmt                *sql.Stmt
+	addPlaylistItemBelongsToPlaylistStmt      *sql.Stmt
+	addSessionStmt                            *sql.Stmt
+	addUserStmt                               *sql.Stmt
+	getAllWinnersForUserStmt                  *sql.Stmt
+	getCurrentRoundStmt                       *sql.Stmt
+	getNextPairStmt                           *sql.Stmt
+	getPlaylistStmt                           *sql.Stmt
+	getPlaylistItemStmt                       *sql.Stmt
+	getPlaylistsForUserStmt                   *sql.Stmt
+	getUserStmt                               *sql.Stmt
+	getWinnerStmt                             *sql.Stmt
+	initializePossibleNextItemsForSessionStmt *sql.Stmt
+	setCurrentRoundStmt                       *sql.Stmt
+	setUserSessionStmt                        *sql.Stmt
+	setWinnerStmt                             *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -251,8 +260,9 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getPlaylistsForUserStmt:              q.getPlaylistsForUserStmt,
 		getUserStmt:                          q.getUserStmt,
 		getWinnerStmt:                        q.getWinnerStmt,
-		setCurrentRoundStmt:                  q.setCurrentRoundStmt,
-		setUserSessionStmt:                   q.setUserSessionStmt,
-		setWinnerStmt:                        q.setWinnerStmt,
+		initializePossibleNextItemsForSessionStmt: q.initializePossibleNextItemsForSessionStmt,
+		setCurrentRoundStmt:                       q.setCurrentRoundStmt,
+		setUserSessionStmt:                        q.setUserSessionStmt,
+		setWinnerStmt:                             q.setWinnerStmt,
 	}
 }

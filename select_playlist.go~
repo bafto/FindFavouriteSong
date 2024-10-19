@@ -30,31 +30,10 @@ func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 	playlistUrl := r.FormValue("playlist_url")
 	logger.Debug("User selected playlist", "playlist-url", playlistUrl)
 
-	playlistId, err := getPlaylistIdFromURL(playlistUrl)
-	if err != nil {
-		return http.StatusNotFound, fmt.Errorf("could not parse spotify id from playlist url: %w", err)
-	}
-	logger.Debug("parsed playlist id", "playlist-id", playlistId)
+	addPlaylistToDB()
 
-	logger.Debug("adding playlist to DB")
-	if status, err := addPlaylistToDB(r.Context(), logger, user, queries, playlistId, playlistUrl); err != nil {
-		return status, err
-	}
-
-	logger.Debug("preparing new session")
-	if status, err := prepareNewSession(r.Context(), logger, user, queries, tx, playlistId); err != nil {
-		return status, err
-	}
-
-	logger.Debug("redirecting to /select_song")
-	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
-	return http.StatusTemporaryRedirect, nil
-}
-
-// helper function for selectPlaylistHandler
-func prepareNewSession(ctx context.Context, logger *slog.Logger, user *ActiveUser, queries *db.Queries, tx *sql.Tx, playlistId string) (int, error) {
 	// create new session
-	sessionID, err := queries.AddSession(ctx, db.AddSessionParams{
+	sessionID, err := queries.AddSession(r.Context(), db.AddSessionParams{
 		Playlist: playlistId,
 		User:     user.ID,
 	})
@@ -64,16 +43,10 @@ func prepareNewSession(ctx context.Context, logger *slog.Logger, user *ActiveUse
 	logger = logger.With("session-id", sessionID)
 	logger.Debug("created new session")
 
-	if err := queries.InitializePossibleNextItemsForSession(ctx, db.InitializePossibleNextItemsForSessionParams{
-		Session: sessionID,
-		Playlist: playlistId,
-	}); err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("could not initialize possible_next_items: %w", err)
-	}
-	logger.Debug("initialized possible_next_items")
+	// prepare
 
 	// add new session to DB
-	if err = queries.SetUserSession(ctx, db.SetUserSessionParams{
+	if err = queries.SetUserSession(r.Context(), db.SetUserSessionParams{
 		CurrentSession: sql.NullInt64{Int64: sessionID, Valid: true},
 		ID:             user.ID,
 	}); err != nil {
@@ -87,26 +60,33 @@ func prepareNewSession(ctx context.Context, logger *slog.Logger, user *ActiveUse
 	user.CurrentSession = sql.NullInt64{Int64: sessionID, Valid: true}
 	logger.Info("added session to user")
 
-	 return -1, nil
+	logger.Debug("redirecting to /select_song")
+	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
+	return http.StatusTemporaryRedirect, nil
 }
 
-// helper function for selectPlaylistHandler
-func addPlaylistToDB(ctx context.Context, logger *slog.Logger, user *ActiveUser, queries *db.Queries, playlistId, playlistUrl string) (int, error) {
+func addPlaylistToDB(ctx context.Context, logger *slog.Logger, user *ActiveUser, playlistUrl string) (int, error) {
+	playlistId, err := getPlaylistIdFromURL(playlistUrl)
+	if err != nil {
+		return http.StatusNotFound, fmt.Errorf("could not parse spotify id from playlist url: %w", err)
+	}
+	logger.Debug("parsed playlist id", "playlist-id", playlistId)
+
 	// fetch playlist info
-	playlist, err := user.client.GetPlaylist(ctx, spotify.ID(playlistId))
+	playlist, err := user.client.GetPlaylist(r.Context(), spotify.ID(playlistId))
 	if err != nil {
 		return http.StatusNotFound, fmt.Errorf("could not parse spotify id from playlist url: %w", err)
 	}
 
 	// add playlist to DB
-	if err := queries.AddOrUpdatePlaylist(ctx, db.AddOrUpdatePlaylistParams{
+	if err := queries.AddOrUpdatePlaylist(r.Context(), db.AddOrUpdatePlaylistParams{
 		ID:   playlistId,
 		Name: notNull(playlist.Name),
 		Url:  notNull(playlistUrl),
 	}); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("could not insert playlist into db: %w", err)
 	}
-	if err := queries.AddPlaylistAddedByUser(ctx, db.AddPlaylistAddedByUserParams{
+	if err := queries.AddPlaylistAddedByUser(r.Context(), db.AddPlaylistAddedByUserParams{
 		User:     user.ID,
 		Playlist: playlistId,
 	}); err != nil {
@@ -128,7 +108,7 @@ func addPlaylistToDB(ctx context.Context, logger *slog.Logger, user *ActiveUser,
 			has_valid_spotif_id = false
 		}
 
-		if err := queries.AddOrUpdatePlaylistItem(ctx, db.AddOrUpdatePlaylistItemParams{
+		if err := queries.AddOrUpdatePlaylistItem(r.Context(), db.AddOrUpdatePlaylistItemParams{
 			ID:                string(it.Track.Track.ID),
 			Title:             notNull(it.Track.Track.Name),
 			Artists:           notNull(artistsToString(it.Track.Track.Artists)),
@@ -138,15 +118,13 @@ func addPlaylistToDB(ctx context.Context, logger *slog.Logger, user *ActiveUser,
 			return http.StatusInternalServerError, fmt.Errorf("could not insert playlist item into db: %w", err)
 		}
 
-		if err := queries.AddPlaylistItemBelongsToPlaylist(ctx, db.AddPlaylistItemBelongsToPlaylistParams{
+		if err := queries.AddPlaylistItemBelongsToPlaylist(r.Context(), db.AddPlaylistItemBelongsToPlaylistParams{
 			PlaylistItem: string(it.Track.Track.ID),
 			Playlist:     playlistId,
 		}); err != nil {
 			return http.StatusInternalServerError, fmt.Errorf("could not insert playlist_item_belongs_to_playlist into db: %w", err)
 		}
 	}
-
-	return -1, nil
 }
 
 func getPlaylistIdFromURL(playlistUrl string) (string, error) {
