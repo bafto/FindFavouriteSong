@@ -39,7 +39,7 @@
 				`
 				button.addEventListener('click', () => {
 					fetch('/api/select_new_playlist?delete=' + body.sessions[i].id)
-						.then(() => { window.location.href = '/' }).catch(console.error);
+						.then(() => {window.location.href = '/'}).catch(console.error);
 					return
 				})
 				dialog.appendChild(button);
@@ -62,6 +62,8 @@
 <body>
 	<main>
 		<h1>Select the song you like more</h1>
+		<h2>Current Round: {{ .Round }}</h2>
+		<h2>Matches played this Round: {{ .Matches }}</h2>
 		<div>
 			<!--- has to be kept in sync with select_songs_api_return.html --->
 			<button onclick="select_song({{ .Song1_ID }}, {{ .Song2_ID }})">

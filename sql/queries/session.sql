@@ -25,6 +25,10 @@ WHERE id = ?;
 INSERT INTO match
 (id, session, round_number, winner, loser) VALUES (NULL, ?, ?, ?, ?);
 
+-- name: CountMatchesForRound :one
+SELECT COUNT(*) FROM match
+WHERE session = ? AND round_number = ?;
+
 -- name: GetSession :one
 SELECT * FROM session
 WHERE id = ?;

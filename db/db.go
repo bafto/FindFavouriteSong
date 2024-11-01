@@ -45,6 +45,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addUserStmt, err = db.PrepareContext(ctx, addUser); err != nil {
 		return nil, fmt.Errorf("error preparing query AddUser: %w", err)
 	}
+	if q.countMatchesForRoundStmt, err = db.PrepareContext(ctx, countMatchesForRound); err != nil {
+		return nil, fmt.Errorf("error preparing query CountMatchesForRound: %w", err)
+	}
 	if q.deleteMatchesForSessionStmt, err = db.PrepareContext(ctx, deleteMatchesForSession); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteMatchesForSession: %w", err)
 	}
@@ -137,6 +140,11 @@ func (q *Queries) Close() error {
 	if q.addUserStmt != nil {
 		if cerr := q.addUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing addUserStmt: %w", cerr)
+		}
+	}
+	if q.countMatchesForRoundStmt != nil {
+		if cerr := q.countMatchesForRoundStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countMatchesForRoundStmt: %w", cerr)
 		}
 	}
 	if q.deleteMatchesForSessionStmt != nil {
@@ -275,6 +283,7 @@ type Queries struct {
 	addPlaylistItemBelongsToPlaylistStmt      *sql.Stmt
 	addSessionStmt                            *sql.Stmt
 	addUserStmt                               *sql.Stmt
+	countMatchesForRoundStmt                  *sql.Stmt
 	deleteMatchesForSessionStmt               *sql.Stmt
 	deletePossibleNextItemsForSessionStmt     *sql.Stmt
 	deleteSessionStmt                         *sql.Stmt
@@ -306,6 +315,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		addPlaylistItemBelongsToPlaylistStmt:  q.addPlaylistItemBelongsToPlaylistStmt,
 		addSessionStmt:                        q.addSessionStmt,
 		addUserStmt:                           q.addUserStmt,
+		countMatchesForRoundStmt:              q.countMatchesForRoundStmt,
 		deleteMatchesForSessionStmt:           q.deleteMatchesForSessionStmt,
 		deletePossibleNextItemsForSessionStmt: q.deletePossibleNextItemsForSessionStmt,
 		deleteSessionStmt:                     q.deleteSessionStmt,

@@ -184,7 +184,7 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 
 		selectPlaylistHtml.Execute(w, map[string]any{
 			"Playlists": mapPlaylists(playlists),
-			"Sessions": mapSessions(r.Context(), logger, sessions),
+			"Sessions":  mapSessions(r.Context(), logger, sessions),
 		})
 		return http.StatusOK, nil
 	}
@@ -265,11 +265,11 @@ func mapPlaylists(playlists []db.Playlist) []TemplatePlaylist {
 }
 
 type TemplateSession struct {
-	ID int64
+	ID       int64
 	Playlist string
 }
 
-func mapSessions(ctx context.Context, logger *slog.Logger,sessions []db.Session) []TemplateSession {
+func mapSessions(ctx context.Context, logger *slog.Logger, sessions []db.Session) []TemplateSession {
 	result := make([]TemplateSession, 0, len(sessions))
 	for _, session := range sessions {
 		playlist, err := queries.GetPlaylist(ctx, session.Playlist)

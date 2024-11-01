@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/bafto/FindFavouriteSong/db"
 	"github.com/gorilla/sessions"
@@ -122,11 +123,22 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		}
 	}
 
+	matchesCount, err := queries.CountMatchesForRound(r.Context(), db.CountMatchesForRoundParams{
+		Session:     sessionID,
+		RoundNumber: currentRound,
+	})
+	if err != nil {
+		logger.Warn("could not retrieve number of matches", "err", err)
+		matchesCount = 0
+	}
+
 	if status, err := commitTransaction(tx); err != nil {
 		return status, err
 	}
 
 	selectSongsHtml.Execute(w, map[string]string{
+		"Round":         strconv.FormatInt(currentRound, 10),
+		"Matches":       strconv.FormatInt(matchesCount, 10),
 		"Song1":         nextPair[0].Title.String,
 		"Song1_Artists": nextPair[0].Artists.String,
 		"Song1_Image":   nextPair[0].Image.String,

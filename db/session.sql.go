@@ -50,6 +50,23 @@ func (q *Queries) AddSession(ctx context.Context, arg AddSessionParams) (int64, 
 	return id, err
 }
 
+const countMatchesForRound = `-- name: CountMatchesForRound :one
+SELECT COUNT(*) FROM match
+WHERE session = ? AND round_number = ?
+`
+
+type CountMatchesForRoundParams struct {
+	Session     int64
+	RoundNumber int64
+}
+
+func (q *Queries) CountMatchesForRound(ctx context.Context, arg CountMatchesForRoundParams) (int64, error) {
+	row := q.queryRow(ctx, q.countMatchesForRoundStmt, countMatchesForRound, arg.Session, arg.RoundNumber)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteMatchesForSession = `-- name: DeleteMatchesForSession :exec
 DELETE FROM match WHERE session = ?
 `
