@@ -23,7 +23,7 @@ WHERE id = ?;
 
 -- name: AddMatch :exec
 INSERT INTO match
-(id, session, round_number, winner, loser) VALUES (NULL, ?, ?, ?, ?);
+(id, session, round_number, winner, loser, creation_timestamp) VALUES (NULL, ?, ?, ?, ?, CURRENT_TIMESTAMP);
 
 -- name: CountMatchesForRound :one
 SELECT COUNT(*) FROM match

@@ -9,11 +9,12 @@ import (
 )
 
 type Match struct {
-	ID          int64
-	Session     int64
-	RoundNumber int64
-	Winner      string
-	Loser       string
+	ID                int64
+	Session           int64
+	RoundNumber       int64
+	Winner            string
+	Loser             string
+	CreationTimestamp sql.NullTime
 }
 
 type Playlist struct {
