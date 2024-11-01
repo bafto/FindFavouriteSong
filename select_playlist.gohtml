@@ -14,6 +14,11 @@
 				body: data,
 			}).then(() => window.location.reload())
 		}
+
+		function select_session(e) {
+			fetch('/api/select_session?session_id=' + e.getAttribute('session_id'), { method: 'POST' })
+				.then(() => window.location.reload())
+		}
 	</script>
 </head>
 
@@ -29,8 +34,13 @@
 			<input type="submit" value="Submit">
 		</form>
 		<button onclick="window.location.href='/stats';">View your statistik</button>
-		{{ range . }}
+		<h1>Playlists</h1>
+		{{ range .Playlists }}
 		<button onclick="select_playlist(this)" playlist_url="{{.Url}}">{{ .Name }}</button>
+		{{ end }}
+		<h1>Incomplete Sessions</h1>
+		{{ range .Sessions }}
+		<button onclick="select_session(this)" session_id="{{.ID}}">{{ .Playlist }}</button>
 		{{ end }}
 	</main>
 </body>

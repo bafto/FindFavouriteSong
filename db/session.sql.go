@@ -34,7 +34,7 @@ func (q *Queries) AddMatch(ctx context.Context, arg AddMatchParams) error {
 
 const addSession = `-- name: AddSession :one
 INSERT INTO session
-(id, playlist, current_round, user, winner) VALUES (NULL, ?, 0, ?, NULL)
+(id, playlist, current_round, user, winner, creation_timestamp) VALUES (NULL, ?, 0, ?, NULL, CURRENT_TIMESTAMP)
 RETURNING session.id
 `
 
@@ -50,6 +50,24 @@ func (q *Queries) AddSession(ctx context.Context, arg AddSessionParams) (int64, 
 	return id, err
 }
 
+const deleteMatchesForSession = `-- name: DeleteMatchesForSession :exec
+DELETE FROM match WHERE session = ?
+`
+
+func (q *Queries) DeleteMatchesForSession(ctx context.Context, session int64) error {
+	_, err := q.exec(ctx, q.deleteMatchesForSessionStmt, deleteMatchesForSession, session)
+	return err
+}
+
+const deleteSession = `-- name: DeleteSession :exec
+DELETE FROM session WHERE id = ?
+`
+
+func (q *Queries) DeleteSession(ctx context.Context, id int64) error {
+	_, err := q.exec(ctx, q.deleteSessionStmt, deleteSession, id)
+	return err
+}
+
 const getCurrentRound = `-- name: GetCurrentRound :one
 SELECT current_round FROM session
 WHERE id = ?
@@ -60,6 +78,37 @@ func (q *Queries) GetCurrentRound(ctx context.Context, id int64) (int64, error) 
 	var current_round int64
 	err := row.Scan(&current_round)
 	return current_round, err
+}
+
+const getNumberOfMatchesCompleted = `-- name: GetNumberOfMatchesCompleted :one
+SELECT COUNT(*) FROM match
+WHERE session = ?
+`
+
+func (q *Queries) GetNumberOfMatchesCompleted(ctx context.Context, session int64) (int64, error) {
+	row := q.queryRow(ctx, q.getNumberOfMatchesCompletedStmt, getNumberOfMatchesCompleted, session)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getSession = `-- name: GetSession :one
+SELECT id, playlist, current_round, user, winner, creation_timestamp FROM session
+WHERE id = ?
+`
+
+func (q *Queries) GetSession(ctx context.Context, id int64) (Session, error) {
+	row := q.queryRow(ctx, q.getSessionStmt, getSession, id)
+	var i Session
+	err := row.Scan(
+		&i.ID,
+		&i.Playlist,
+		&i.CurrentRound,
+		&i.User,
+		&i.Winner,
+		&i.CreationTimestamp,
+	)
+	return i, err
 }
 
 const getWinner = `-- name: GetWinner :one

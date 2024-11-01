@@ -9,6 +9,15 @@ import (
 	"context"
 )
 
+const deletePossibleNextItemsForSession = `-- name: DeletePossibleNextItemsForSession :exec
+DELETE FROM possible_next_items WHERE session = ?
+`
+
+func (q *Queries) DeletePossibleNextItemsForSession(ctx context.Context, session int64) error {
+	_, err := q.exec(ctx, q.deletePossibleNextItemsForSessionStmt, deletePossibleNextItemsForSession, session)
+	return err
+}
+
 const getNextPair = `-- name: GetNextPair :many
 SELECT item.id, item.title, item.artists, item.image, item.has_valid_spotify_id 
 FROM possible_next_items pn 

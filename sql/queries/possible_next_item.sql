@@ -11,3 +11,6 @@ FROM possible_next_items pn
 INNER JOIN playlist_item item ON pn.playlist_item = item.id
 WHERE pn.session = ? AND pn.lost = FALSE AND pn.won_round != sqlc.arg(current_round)
 ORDER BY RANDOM() DESC LIMIT 2;
+
+-- name: DeletePossibleNextItemsForSession :exec
+DELETE FROM possible_next_items WHERE session = ?;

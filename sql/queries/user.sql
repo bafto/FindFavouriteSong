@@ -22,3 +22,7 @@ INSERT OR IGNORE INTO playlist_added_by_user
 -- name: GetPlaylistsForUser :many
 SELECT p.* FROM playlist_added_by_user pa, playlist p
 WHERE pa.user = ? AND p.id = pa.playlist;
+
+-- name: GetNonActiveUserSessions :many
+SELECT * FROM session
+WHERE user = ? AND id != sqlc.arg(activeSession) AND winner IS NULL;

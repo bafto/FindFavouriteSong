@@ -48,6 +48,13 @@ type ActiveUser struct {
 	client *spotify.Client
 }
 
+func (user *ActiveUser) CurrentSessionNotNull() int64 {
+	if user.CurrentSession.Valid {
+		return user.CurrentSession.Int64
+	}
+	return -1
+}
+
 var (
 	config Config
 
@@ -114,6 +121,8 @@ func main() {
 	mux.HandleFunc("/", withMiddleware(defaultHandler))
 	mux.HandleFunc("/spotifyauthentication", withMiddleware(authHandler))
 	mux.HandleFunc("POST /api/select_playlist", withMiddleware(selectPlaylistHandler))
+	mux.HandleFunc("POST /api/select_session", withMiddleware(selectSessionHandler))
+	mux.HandleFunc("/api/select_new_playlist", withMiddleware(selectNewPlaylistHandler))
 	mux.HandleFunc("/select_song", withMiddleware(selectSongPageHandler))
 	mux.HandleFunc("POST /api/select_song", withMiddleware(selectSongHandler))
 	mux.HandleFunc("/winner", withMiddleware(winnerHandler))
@@ -162,7 +171,21 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 			return http.StatusInternalServerError, fmt.Errorf("Error loading playlist for user: %w", err)
 		}
 
-		selectPlaylistHtml.Execute(w, mapPlaylists(playlists))
+		sessions, err := queries.GetNonActiveUserSessions(r.Context(), db.GetNonActiveUserSessionsParams{
+			User:          user.ID,
+			Activesession: user.CurrentSessionNotNull(),
+		})
+
+		logger.Debug("recieved non-active sessions", "sessions", sessions)
+
+		if err != nil {
+			return http.StatusInternalServerError, fmt.Errorf("failed to get non active user sessions: %w", err)
+		}
+
+		selectPlaylistHtml.Execute(w, map[string]any{
+			"Playlists": mapPlaylists(playlists),
+			"Sessions": mapSessions(r.Context(), logger, sessions),
+		})
 		return http.StatusOK, nil
 	}
 
@@ -237,6 +260,25 @@ func mapPlaylists(playlists []db.Playlist) []TemplatePlaylist {
 		if playlist.Name.Valid && playlist.Url.Valid {
 			result = append(result, TemplatePlaylist{Name: playlist.Name.String, Url: playlist.Url.String})
 		}
+	}
+	return result
+}
+
+type TemplateSession struct {
+	ID int64
+	Playlist string
+}
+
+func mapSessions(ctx context.Context, logger *slog.Logger,sessions []db.Session) []TemplateSession {
+	result := make([]TemplateSession, 0, len(sessions))
+	for _, session := range sessions {
+		playlist, err := queries.GetPlaylist(ctx, session.Playlist)
+		if err != nil {
+			logger.Warn("could not get playlist from db", "err", err)
+			playlist.Name = notNull(session.Playlist)
+		}
+
+		result = append(result, TemplateSession{ID: session.ID, Playlist: playlist.Name.String})
 	}
 	return result
 }

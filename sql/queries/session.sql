@@ -1,6 +1,6 @@
 -- name: AddSession :one
 INSERT INTO session
-(id, playlist, current_round, user, winner) VALUES (NULL, ?, 0, ?, NULL)
+(id, playlist, current_round, user, winner, creation_timestamp) VALUES (NULL, ?, 0, ?, NULL, CURRENT_TIMESTAMP)
 RETURNING session.id;
 
 -- name: GetWinner :one
@@ -25,3 +25,16 @@ WHERE id = ?;
 INSERT INTO match
 (id, session, round_number, winner, loser) VALUES (NULL, ?, ?, ?, ?);
 
+-- name: GetSession :one
+SELECT * FROM session
+WHERE id = ?;
+
+-- name: GetNumberOfMatchesCompleted :one
+SELECT COUNT(*) FROM match
+WHERE session = ?;
+
+-- name: DeleteSession :exec
+DELETE FROM session WHERE id = ?;
+
+-- name: DeleteMatchesForSession :exec
+DELETE FROM match WHERE session = ?;

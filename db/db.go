@@ -45,6 +45,15 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.addUserStmt, err = db.PrepareContext(ctx, addUser); err != nil {
 		return nil, fmt.Errorf("error preparing query AddUser: %w", err)
 	}
+	if q.deleteMatchesForSessionStmt, err = db.PrepareContext(ctx, deleteMatchesForSession); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteMatchesForSession: %w", err)
+	}
+	if q.deletePossibleNextItemsForSessionStmt, err = db.PrepareContext(ctx, deletePossibleNextItemsForSession); err != nil {
+		return nil, fmt.Errorf("error preparing query DeletePossibleNextItemsForSession: %w", err)
+	}
+	if q.deleteSessionStmt, err = db.PrepareContext(ctx, deleteSession); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteSession: %w", err)
+	}
 	if q.getAllWinnersForUserStmt, err = db.PrepareContext(ctx, getAllWinnersForUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllWinnersForUser: %w", err)
 	}
@@ -54,6 +63,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getNextPairStmt, err = db.PrepareContext(ctx, getNextPair); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNextPair: %w", err)
 	}
+	if q.getNonActiveUserSessionsStmt, err = db.PrepareContext(ctx, getNonActiveUserSessions); err != nil {
+		return nil, fmt.Errorf("error preparing query GetNonActiveUserSessions: %w", err)
+	}
+	if q.getNumberOfMatchesCompletedStmt, err = db.PrepareContext(ctx, getNumberOfMatchesCompleted); err != nil {
+		return nil, fmt.Errorf("error preparing query GetNumberOfMatchesCompleted: %w", err)
+	}
 	if q.getPlaylistStmt, err = db.PrepareContext(ctx, getPlaylist); err != nil {
 		return nil, fmt.Errorf("error preparing query GetPlaylist: %w", err)
 	}
@@ -62,6 +77,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getPlaylistsForUserStmt, err = db.PrepareContext(ctx, getPlaylistsForUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetPlaylistsForUser: %w", err)
+	}
+	if q.getSessionStmt, err = db.PrepareContext(ctx, getSession); err != nil {
+		return nil, fmt.Errorf("error preparing query GetSession: %w", err)
 	}
 	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
@@ -121,6 +139,21 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing addUserStmt: %w", cerr)
 		}
 	}
+	if q.deleteMatchesForSessionStmt != nil {
+		if cerr := q.deleteMatchesForSessionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteMatchesForSessionStmt: %w", cerr)
+		}
+	}
+	if q.deletePossibleNextItemsForSessionStmt != nil {
+		if cerr := q.deletePossibleNextItemsForSessionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deletePossibleNextItemsForSessionStmt: %w", cerr)
+		}
+	}
+	if q.deleteSessionStmt != nil {
+		if cerr := q.deleteSessionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteSessionStmt: %w", cerr)
+		}
+	}
 	if q.getAllWinnersForUserStmt != nil {
 		if cerr := q.getAllWinnersForUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAllWinnersForUserStmt: %w", cerr)
@@ -136,6 +169,16 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getNextPairStmt: %w", cerr)
 		}
 	}
+	if q.getNonActiveUserSessionsStmt != nil {
+		if cerr := q.getNonActiveUserSessionsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getNonActiveUserSessionsStmt: %w", cerr)
+		}
+	}
+	if q.getNumberOfMatchesCompletedStmt != nil {
+		if cerr := q.getNumberOfMatchesCompletedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getNumberOfMatchesCompletedStmt: %w", cerr)
+		}
+	}
 	if q.getPlaylistStmt != nil {
 		if cerr := q.getPlaylistStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getPlaylistStmt: %w", cerr)
@@ -149,6 +192,11 @@ func (q *Queries) Close() error {
 	if q.getPlaylistsForUserStmt != nil {
 		if cerr := q.getPlaylistsForUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getPlaylistsForUserStmt: %w", cerr)
+		}
+	}
+	if q.getSessionStmt != nil {
+		if cerr := q.getSessionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getSessionStmt: %w", cerr)
 		}
 	}
 	if q.getUserStmt != nil {
@@ -227,12 +275,18 @@ type Queries struct {
 	addPlaylistItemBelongsToPlaylistStmt      *sql.Stmt
 	addSessionStmt                            *sql.Stmt
 	addUserStmt                               *sql.Stmt
+	deleteMatchesForSessionStmt               *sql.Stmt
+	deletePossibleNextItemsForSessionStmt     *sql.Stmt
+	deleteSessionStmt                         *sql.Stmt
 	getAllWinnersForUserStmt                  *sql.Stmt
 	getCurrentRoundStmt                       *sql.Stmt
 	getNextPairStmt                           *sql.Stmt
+	getNonActiveUserSessionsStmt              *sql.Stmt
+	getNumberOfMatchesCompletedStmt           *sql.Stmt
 	getPlaylistStmt                           *sql.Stmt
 	getPlaylistItemStmt                       *sql.Stmt
 	getPlaylistsForUserStmt                   *sql.Stmt
+	getSessionStmt                            *sql.Stmt
 	getUserStmt                               *sql.Stmt
 	getWinnerStmt                             *sql.Stmt
 	initializePossibleNextItemsForSessionStmt *sql.Stmt
@@ -243,23 +297,29 @@ type Queries struct {
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                   tx,
-		tx:                                   tx,
-		addMatchStmt:                         q.addMatchStmt,
-		addOrUpdatePlaylistStmt:              q.addOrUpdatePlaylistStmt,
-		addOrUpdatePlaylistItemStmt:          q.addOrUpdatePlaylistItemStmt,
-		addPlaylistAddedByUserStmt:           q.addPlaylistAddedByUserStmt,
-		addPlaylistItemBelongsToPlaylistStmt: q.addPlaylistItemBelongsToPlaylistStmt,
-		addSessionStmt:                       q.addSessionStmt,
-		addUserStmt:                          q.addUserStmt,
-		getAllWinnersForUserStmt:             q.getAllWinnersForUserStmt,
-		getCurrentRoundStmt:                  q.getCurrentRoundStmt,
-		getNextPairStmt:                      q.getNextPairStmt,
-		getPlaylistStmt:                      q.getPlaylistStmt,
-		getPlaylistItemStmt:                  q.getPlaylistItemStmt,
-		getPlaylistsForUserStmt:              q.getPlaylistsForUserStmt,
-		getUserStmt:                          q.getUserStmt,
-		getWinnerStmt:                        q.getWinnerStmt,
+		db:                                    tx,
+		tx:                                    tx,
+		addMatchStmt:                          q.addMatchStmt,
+		addOrUpdatePlaylistStmt:               q.addOrUpdatePlaylistStmt,
+		addOrUpdatePlaylistItemStmt:           q.addOrUpdatePlaylistItemStmt,
+		addPlaylistAddedByUserStmt:            q.addPlaylistAddedByUserStmt,
+		addPlaylistItemBelongsToPlaylistStmt:  q.addPlaylistItemBelongsToPlaylistStmt,
+		addSessionStmt:                        q.addSessionStmt,
+		addUserStmt:                           q.addUserStmt,
+		deleteMatchesForSessionStmt:           q.deleteMatchesForSessionStmt,
+		deletePossibleNextItemsForSessionStmt: q.deletePossibleNextItemsForSessionStmt,
+		deleteSessionStmt:                     q.deleteSessionStmt,
+		getAllWinnersForUserStmt:              q.getAllWinnersForUserStmt,
+		getCurrentRoundStmt:                   q.getCurrentRoundStmt,
+		getNextPairStmt:                       q.getNextPairStmt,
+		getNonActiveUserSessionsStmt:          q.getNonActiveUserSessionsStmt,
+		getNumberOfMatchesCompletedStmt:       q.getNumberOfMatchesCompletedStmt,
+		getPlaylistStmt:                       q.getPlaylistStmt,
+		getPlaylistItemStmt:                   q.getPlaylistItemStmt,
+		getPlaylistsForUserStmt:               q.getPlaylistsForUserStmt,
+		getSessionStmt:                        q.getSessionStmt,
+		getUserStmt:                           q.getUserStmt,
+		getWinnerStmt:                         q.getWinnerStmt,
 		initializePossibleNextItemsForSessionStmt: q.initializePossibleNextItemsForSessionStmt,
 		setCurrentRoundStmt:                       q.setCurrentRoundStmt,
 		setUserSessionStmt:                        q.setUserSessionStmt,

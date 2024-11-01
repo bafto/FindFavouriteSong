@@ -48,11 +48,12 @@ type PossibleNextItem struct {
 }
 
 type Session struct {
-	ID           int64
-	Playlist     string
-	CurrentRound int64
-	User         string
-	Winner       sql.NullString
+	ID                int64
+	Playlist          string
+	CurrentRound      int64
+	User              string
+	Winner            sql.NullString
+	CreationTimestamp sql.NullTime
 }
 
 type User struct {

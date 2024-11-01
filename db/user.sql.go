@@ -65,6 +65,46 @@ func (q *Queries) GetAllWinnersForUser(ctx context.Context, user string) ([]sql.
 	return items, nil
 }
 
+const getNonActiveUserSessions = `-- name: GetNonActiveUserSessions :many
+SELECT id, playlist, current_round, user, winner, creation_timestamp FROM session
+WHERE user = ? AND id != ?2 AND winner IS NULL
+`
+
+type GetNonActiveUserSessionsParams struct {
+	User          string
+	Activesession int64
+}
+
+func (q *Queries) GetNonActiveUserSessions(ctx context.Context, arg GetNonActiveUserSessionsParams) ([]Session, error) {
+	rows, err := q.query(ctx, q.getNonActiveUserSessionsStmt, getNonActiveUserSessions, arg.User, arg.Activesession)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Session
+	for rows.Next() {
+		var i Session
+		if err := rows.Scan(
+			&i.ID,
+			&i.Playlist,
+			&i.CurrentRound,
+			&i.User,
+			&i.Winner,
+			&i.CreationTimestamp,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPlaylistsForUser = `-- name: GetPlaylistsForUser :many
 SELECT p.id, p.name, p.url FROM playlist_added_by_user pa, playlist p
 WHERE pa.user = ? AND p.id = pa.playlist
