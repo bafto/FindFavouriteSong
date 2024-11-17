@@ -48,6 +48,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.countMatchesForRoundStmt, err = db.PrepareContext(ctx, countMatchesForRound); err != nil {
 		return nil, fmt.Errorf("error preparing query CountMatchesForRound: %w", err)
 	}
+	if q.deleteItemFromPlaylistStmt, err = db.PrepareContext(ctx, deleteItemFromPlaylist); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteItemFromPlaylist: %w", err)
+	}
 	if q.deleteMatchesForSessionStmt, err = db.PrepareContext(ctx, deleteMatchesForSession); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteMatchesForSession: %w", err)
 	}
@@ -62,6 +65,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getCurrentRoundStmt, err = db.PrepareContext(ctx, getCurrentRound); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCurrentRound: %w", err)
+	}
+	if q.getItemIdsForPlaylistStmt, err = db.PrepareContext(ctx, getItemIdsForPlaylist); err != nil {
+		return nil, fmt.Errorf("error preparing query GetItemIdsForPlaylist: %w", err)
 	}
 	if q.getNextPairStmt, err = db.PrepareContext(ctx, getNextPair); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNextPair: %w", err)
@@ -147,6 +153,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing countMatchesForRoundStmt: %w", cerr)
 		}
 	}
+	if q.deleteItemFromPlaylistStmt != nil {
+		if cerr := q.deleteItemFromPlaylistStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteItemFromPlaylistStmt: %w", cerr)
+		}
+	}
 	if q.deleteMatchesForSessionStmt != nil {
 		if cerr := q.deleteMatchesForSessionStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteMatchesForSessionStmt: %w", cerr)
@@ -170,6 +181,11 @@ func (q *Queries) Close() error {
 	if q.getCurrentRoundStmt != nil {
 		if cerr := q.getCurrentRoundStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getCurrentRoundStmt: %w", cerr)
+		}
+	}
+	if q.getItemIdsForPlaylistStmt != nil {
+		if cerr := q.getItemIdsForPlaylistStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getItemIdsForPlaylistStmt: %w", cerr)
 		}
 	}
 	if q.getNextPairStmt != nil {
@@ -284,11 +300,13 @@ type Queries struct {
 	addSessionStmt                            *sql.Stmt
 	addUserStmt                               *sql.Stmt
 	countMatchesForRoundStmt                  *sql.Stmt
+	deleteItemFromPlaylistStmt                *sql.Stmt
 	deleteMatchesForSessionStmt               *sql.Stmt
 	deletePossibleNextItemsForSessionStmt     *sql.Stmt
 	deleteSessionStmt                         *sql.Stmt
 	getAllWinnersForUserStmt                  *sql.Stmt
 	getCurrentRoundStmt                       *sql.Stmt
+	getItemIdsForPlaylistStmt                 *sql.Stmt
 	getNextPairStmt                           *sql.Stmt
 	getNonActiveUserSessionsStmt              *sql.Stmt
 	getNumberOfMatchesCompletedStmt           *sql.Stmt
@@ -306,30 +324,32 @@ type Queries struct {
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                    tx,
-		tx:                                    tx,
-		addMatchStmt:                          q.addMatchStmt,
-		addOrUpdatePlaylistStmt:               q.addOrUpdatePlaylistStmt,
-		addOrUpdatePlaylistItemStmt:           q.addOrUpdatePlaylistItemStmt,
-		addPlaylistAddedByUserStmt:            q.addPlaylistAddedByUserStmt,
-		addPlaylistItemBelongsToPlaylistStmt:  q.addPlaylistItemBelongsToPlaylistStmt,
-		addSessionStmt:                        q.addSessionStmt,
-		addUserStmt:                           q.addUserStmt,
-		countMatchesForRoundStmt:              q.countMatchesForRoundStmt,
-		deleteMatchesForSessionStmt:           q.deleteMatchesForSessionStmt,
-		deletePossibleNextItemsForSessionStmt: q.deletePossibleNextItemsForSessionStmt,
-		deleteSessionStmt:                     q.deleteSessionStmt,
-		getAllWinnersForUserStmt:              q.getAllWinnersForUserStmt,
-		getCurrentRoundStmt:                   q.getCurrentRoundStmt,
-		getNextPairStmt:                       q.getNextPairStmt,
-		getNonActiveUserSessionsStmt:          q.getNonActiveUserSessionsStmt,
-		getNumberOfMatchesCompletedStmt:       q.getNumberOfMatchesCompletedStmt,
-		getPlaylistStmt:                       q.getPlaylistStmt,
-		getPlaylistItemStmt:                   q.getPlaylistItemStmt,
-		getPlaylistsForUserStmt:               q.getPlaylistsForUserStmt,
-		getSessionStmt:                        q.getSessionStmt,
-		getUserStmt:                           q.getUserStmt,
-		getWinnerStmt:                         q.getWinnerStmt,
+		db:                                        tx,
+		tx:                                        tx,
+		addMatchStmt:                              q.addMatchStmt,
+		addOrUpdatePlaylistStmt:                   q.addOrUpdatePlaylistStmt,
+		addOrUpdatePlaylistItemStmt:               q.addOrUpdatePlaylistItemStmt,
+		addPlaylistAddedByUserStmt:                q.addPlaylistAddedByUserStmt,
+		addPlaylistItemBelongsToPlaylistStmt:      q.addPlaylistItemBelongsToPlaylistStmt,
+		addSessionStmt:                            q.addSessionStmt,
+		addUserStmt:                               q.addUserStmt,
+		countMatchesForRoundStmt:                  q.countMatchesForRoundStmt,
+		deleteItemFromPlaylistStmt:                q.deleteItemFromPlaylistStmt,
+		deleteMatchesForSessionStmt:               q.deleteMatchesForSessionStmt,
+		deletePossibleNextItemsForSessionStmt:     q.deletePossibleNextItemsForSessionStmt,
+		deleteSessionStmt:                         q.deleteSessionStmt,
+		getAllWinnersForUserStmt:                  q.getAllWinnersForUserStmt,
+		getCurrentRoundStmt:                       q.getCurrentRoundStmt,
+		getItemIdsForPlaylistStmt:                 q.getItemIdsForPlaylistStmt,
+		getNextPairStmt:                           q.getNextPairStmt,
+		getNonActiveUserSessionsStmt:              q.getNonActiveUserSessionsStmt,
+		getNumberOfMatchesCompletedStmt:           q.getNumberOfMatchesCompletedStmt,
+		getPlaylistStmt:                           q.getPlaylistStmt,
+		getPlaylistItemStmt:                       q.getPlaylistItemStmt,
+		getPlaylistsForUserStmt:                   q.getPlaylistsForUserStmt,
+		getSessionStmt:                            q.getSessionStmt,
+		getUserStmt:                               q.getUserStmt,
+		getWinnerStmt:                             q.getWinnerStmt,
 		initializePossibleNextItemsForSessionStmt: q.initializePossibleNextItemsForSessionStmt,
 		setCurrentRoundStmt:                       q.setCurrentRoundStmt,
 		setUserSessionStmt:                        q.setUserSessionStmt,

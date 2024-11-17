@@ -92,7 +92,7 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 
 		switch len(nextPair) {
 		case 0:
-			panic("unexpected pair length 0")
+			panic("unexpected pair length 0") // TODO: investiage error
 		case 1:
 			winnerID := nextPair[0].ID
 

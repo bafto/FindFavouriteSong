@@ -17,3 +17,9 @@ INSERT OR REPLACE INTO playlist_item
 -- name: AddPlaylistItemBelongsToPlaylist :exec
 INSERT OR IGNORE INTO playlist_item_belongs_to_playlist
 (playlist_item, playlist) VALUES (?, ?);
+
+-- name: DeleteItemFromPlaylist :exec
+DELETE FROM playlist_item_belongs_to_playlist WHERE playlist = ? AND playlist_item = ?;
+
+-- name: GetItemIdsForPlaylist :many
+SELECT playlist_item FROM playlist_item_belongs_to_playlist WHERE playlist = ?;

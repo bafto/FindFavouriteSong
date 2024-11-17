@@ -65,6 +65,47 @@ func (q *Queries) AddPlaylistItemBelongsToPlaylist(ctx context.Context, arg AddP
 	return err
 }
 
+const deleteItemFromPlaylist = `-- name: DeleteItemFromPlaylist :exec
+DELETE FROM playlist_item_belongs_to_playlist WHERE playlist = ? AND playlist_item = ?
+`
+
+type DeleteItemFromPlaylistParams struct {
+	Playlist     string
+	PlaylistItem string
+}
+
+func (q *Queries) DeleteItemFromPlaylist(ctx context.Context, arg DeleteItemFromPlaylistParams) error {
+	_, err := q.exec(ctx, q.deleteItemFromPlaylistStmt, deleteItemFromPlaylist, arg.Playlist, arg.PlaylistItem)
+	return err
+}
+
+const getItemIdsForPlaylist = `-- name: GetItemIdsForPlaylist :many
+SELECT playlist_item FROM playlist_item_belongs_to_playlist WHERE playlist = ?
+`
+
+func (q *Queries) GetItemIdsForPlaylist(ctx context.Context, playlist string) ([]string, error) {
+	rows, err := q.query(ctx, q.getItemIdsForPlaylistStmt, getItemIdsForPlaylist, playlist)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var playlist_item string
+		if err := rows.Scan(&playlist_item); err != nil {
+			return nil, err
+		}
+		items = append(items, playlist_item)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPlaylist = `-- name: GetPlaylist :one
 SELECT id, name, url FROM playlist
 WHERE id = ? LIMIT 1

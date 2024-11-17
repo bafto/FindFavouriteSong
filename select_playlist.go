@@ -97,6 +97,8 @@ func addPlaylistToDB(ctx context.Context, logger *slog.Logger, user *ActiveUser,
 	if err != nil {
 		return http.StatusNotFound, fmt.Errorf("could not parse spotify id from playlist url: %w", err)
 	}
+	logger = logger.With("playlist-id", playlist.ID)
+	logger.Debug("fetched playlist")
 
 	// add playlist to DB
 	if err := queries.AddOrUpdatePlaylist(ctx, db.AddOrUpdatePlaylistParams{
@@ -106,19 +108,23 @@ func addPlaylistToDB(ctx context.Context, logger *slog.Logger, user *ActiveUser,
 	}); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("could not insert playlist into db: %w", err)
 	}
+	logger.Debug("added playlist to db")
 	if err := queries.AddPlaylistAddedByUser(ctx, db.AddPlaylistAddedByUserParams{
 		User:     user.ID,
 		Playlist: playlistId,
 	}); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("could not insert playlist_added_by_user into db: %w", err)
 	}
+	logger.Debug("added playlist to user")
 
 	// fetch playlist items
 	playlistItems, err := getAllPlaylistItems(ctx, user.client, playlist.ID)
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("could not load songs from playlist: %w", err)
 	}
+	logger.Debug("fetched playlist items", "n-items", len(playlistItems))
 
+	playlistItemsSet := map[spotify.ID]struct{}{}
 	// add playlist items to DB
 	for i := range playlistItems {
 		it := &playlistItems[i]
@@ -143,6 +149,28 @@ func addPlaylistToDB(ctx context.Context, logger *slog.Logger, user *ActiveUser,
 			Playlist:     playlistId,
 		}); err != nil {
 			return http.StatusInternalServerError, fmt.Errorf("could not insert playlist_item_belongs_to_playlist into db: %w", err)
+		}
+
+		playlistItemsSet[it.Track.Track.ID] = struct{}{}
+	}
+	logger.Debug("added playlist items to db")
+
+	playlistItemIds, err := queries.GetItemIdsForPlaylist(ctx, playlistId)
+	if err != nil {
+		logger.Warn("Could not retrieve items for playlist from db: not deleting any items", "err", err, "playlist-id", playlistId)
+		return -1, nil
+	}
+
+	for _, item := range playlistItemIds {
+		if _, ok := playlistItemsSet[spotify.ID(item)]; ok {
+			continue
+		}
+
+		if err := queries.DeleteItemFromPlaylist(ctx, db.DeleteItemFromPlaylistParams{
+			Playlist:     playlistId,
+			PlaylistItem: item,
+		}); err != nil {
+			logger.Warn("Error deleting item from playlist_item_belongs_to_playlist", "err", err, "playlist-item-id", item, "playlist-id", playlistId)
 		}
 	}
 
