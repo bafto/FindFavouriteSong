@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/bafto/FindFavouriteSong/db"
 	"github.com/gorilla/securecookie"
@@ -53,6 +54,24 @@ func (user *ActiveUser) CurrentSessionNotNull() int64 {
 		return user.CurrentSession.Int64
 	}
 	return -1
+}
+
+// to be run concurrently
+func checkpoint_ticker(ctx context.Context, db *sql.DB) {
+	ticker := time.Tick(config.CheckpointInterval)
+	for range ticker {
+		slog.Info("starting db checkpoint")
+		func() {
+			ctx, cancel := context.WithTimeout(ctx, config.CheckpointTimeout)
+			defer cancel()
+
+			if err := checkpoint_db(ctx, db); err != nil {
+				slog.Error("failed to checkpoint db", "err", err)
+				return
+			}
+			slog.Info("done checkpointing db")
+		}()
+	}
 }
 
 var (
@@ -113,6 +132,8 @@ func main() {
 		return
 	}
 	defer queries.Close()
+
+	go checkpoint_ticker(ctx, db_conn)
 
 	mux := http.NewServeMux()
 

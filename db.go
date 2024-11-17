@@ -116,3 +116,8 @@ func backup_db(ctx context.Context, dest, src *sql.DB) error {
 		})
 	})
 }
+
+func checkpoint_db(ctx context.Context, db *sql.DB) error {
+	_, err := db.ExecContext(ctx, "PRAGMA WAL_CHECKPOINT(TRUNCATE)")
+	return err
+}
