@@ -3,7 +3,6 @@
 
 <head>
 	<title>Find Favourite Song</title>
-	<link rel="stylesheet" media="screen" href="/static/style.css">
 	<script>
 		function select_playlist(e) {
 			const data = new FormData();
@@ -16,7 +15,7 @@
 		}
 
 		function select_session(e) {
-			fetch('/api/select_session?session_id=' + e.getAttribute('session_id'), { method: 'POST' })
+			fetch('/api/select_session?session_id=' + e.getAttribute('session_id'), {method: 'POST'})
 				.then(() => window.location.reload())
 		}
 	</script>

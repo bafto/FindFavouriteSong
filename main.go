@@ -137,8 +137,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./public"))))
-
 	mux.HandleFunc("/", withMiddleware(defaultHandler))
 	mux.HandleFunc("/spotifyauthentication", withMiddleware(authHandler))
 	mux.HandleFunc("POST /api/select_playlist", withMiddleware(selectPlaylistHandler))
