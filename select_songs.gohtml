@@ -75,7 +75,7 @@
 				<!--- has to be kept in sync with select_songs_api_return.html --->
 				<div class="flex flex-col items-center justify-center hover:bg-slate-500 h-full w-full py-5">
 					<button onclick="select_song({{ .Song1_ID }}, {{ .Song2_ID }})"
-						class="flex flex-col items-center justify-center text-center">
+						class="flex flex-col md:flex-col-reverse lg:flex-col items-center justify-center text-center">
 						{{ if .Song1_Image }}
 						<img src="{{ .Song1_Image }}"
 							class="max-w-[250px] md:min-w-[300px] max-h-[250px] md:min-h-[300px]" />
@@ -87,13 +87,15 @@
 							</path>
 						</svg>
 						{{ end }}
-						<h3 class="font-bold">{{ .Song1 }}</h3>
-						<h4>{{ .Song1_Artists }}</h4>
+						<div>
+							<h3 class="font-bold">{{ .Song1 }}</h3>
+							<h4>{{ .Song1_Artists }}</h4>
+						</div>
 					</button>
 				</div>
 				<div class="flex flex-col items-center justify-center hover:bg-slate-500 h-full w-full py-5">
 					<button onclick="select_song({{ .Song2_ID }}, {{ .Song1_ID }})"
-						class="flex flex-col items-center justify-center text-center">
+						class="flex flex-col md:flex-col-reverse lg:flex-col items-center justify-center text-center">
 						{{ if .Song2_Image }}
 						<img src="{{ .Song2_Image }}"
 							class="max-w-[250px] md:min-w-[300px] max-h-[250px] md:min-h-[300px]" />
@@ -105,8 +107,10 @@
 							</path>
 						</svg>
 						{{ end }}
-						<h3 class="font-bold">{{ .Song2 }}</h3>
-						<h4>{{ .Song2_Artists }}</h4>
+						<div>
+							<h3 class="font-bold">{{ .Song2 }}</h3>
+							<h4>{{ .Song2_Artists }}</h4>
+						</div>
 					</button>
 				</div>
 			</div>
