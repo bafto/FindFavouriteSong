@@ -5,61 +5,8 @@
 	<title>Find Favourite Song</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<script src="https://cdn.tailwindcss.com"></script>
-	<script>
-		function select_song(winner, loser) {
-			fetch(`/api/select_song?winner=${winner}&loser=${loser}`, {method: 'POST'})
-				.then(() => window.location.reload());
-		}
-
-		async function select_new_playlist() {
-			const resp = await fetch('/api/select_new_playlist', {method: 'GET'}).catch(console.error);
-
-			if (resp.redirected) {
-				window.location.href = resp.url;
-				return;
-			}
-
-			if (!resp.ok) {
-				console.error('select_new_playlist error');
-				return;
-			}
-
-			const body = await resp.json();
-			const dialog = document.getElementById('select_new_playlist_dialog');
-
-			dialog.innerHTML = `
-				<h1>You have too many active sessions (maximum is 3)</h1>
-				<p>Which of the sessions should be replaced by this one?</p>
-				`
-
-			for (let i = 0; i < body.sessions.length; i++) {
-				const button = document.createElement('button');
-				button.innerHTML = `
-					<h2>${body.sessions[i].playlist}</h2>
-					<p>Started: ${body.sessions[i].started}</p>
-					<p>Matches completed: ${body.sessions[i].matches_completed}</p>
-				`
-				button.addEventListener('click', () => {
-					fetch('/api/select_new_playlist?delete=' + body.sessions[i].id)
-						.then(() => {window.location.href = '/'}).catch(console.error);
-					return
-				})
-				dialog.appendChild(button);
-			}
-
-			const cancel = document.createElement('button');
-			cancel.innerText = 'Cancel'
-			cancel.addEventListener('click', () => {
-				dialog.close();
-				dialog.innerHTML = "";
-			})
-			dialog.appendChild(cancel);
-
-			dialog.showModal();
-		}
-	</script>
+	<script src="/public/js/select_songs.js" defer></script>
 </head>
-
 
 <body class="bg-slate-400">
 	<main>
@@ -67,49 +14,44 @@
 			<div class="flex flex-col items-center justify-center py-5 bg-slate-700">
 				<h1 class="text-white text-xl font-bold">Select the song you like more</h1>
 				<div class="flex flex-col md:flex-row items-center w-full">
-					<h2 class="grow text-white text-lg text-center">Current Round: {{ .Round }}</h2>
-					<h2 class="grow text-white text-lg text-center">Matches played this Round: {{ .Matches }}</h2>
+					<h2 id="current_round" class="grow text-white text-lg text-center">Current Round: 0</h2>
+					<h2 id="matches_played" class="grow text-white text-lg text-center">Matches played this Round: 0
+					</h2>
 				</div>
 			</div>
 			<div class="h-full flex flex-col md:flex-row items-stretch mx-auto w-full">
 				<!--- has to be kept in sync with select_songs_api_return.html --->
 				<div class="flex flex-col items-center justify-center hover:bg-slate-500 h-full w-full py-5">
-					<button onclick="select_song({{ .Song1_ID }}, {{ .Song2_ID }})"
+					<button id="song1_btn" onclick="select_song(this)" winner="" loser=""
 						class="flex flex-col md:flex-col-reverse lg:flex-col items-center justify-center text-center">
-						{{ if .Song1_Image }}
-						<img src="{{ .Song1_Image }}"
-							class="max-w-[250px] md:min-w-[300px] max-h-[250px] md:min-h-[300px]" />
-						{{ else }}
-						<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet"
+						<img id="song1_img" src=""
+							class="invisible max-w-[250px] md:min-w-[300px] max-h-[250px] md:min-h-[300px]" />
+						<svg id="song1_svg" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet"
 							class="max-w-[250px] md:min-w-[300px] max-h-[250px] md:min-h-[300px]">
 							<path
 								d="M6 3h15v15.167a3.5 3.5 0 1 1-3.5-3.5H19V5H8v13.167a3.5 3.5 0 1 1-3.5-3.5H6V3zm0 13.667H4.5a1.5 1.5 0 1 0 1.5 1.5v-1.5zm13 0h-1.5a1.5 1.5 0 1 0 1.5 1.5v-1.5z">
 							</path>
 						</svg>
-						{{ end }}
 						<div>
-							<h3 class="font-bold">{{ .Song1 }}</h3>
-							<h4>{{ .Song1_Artists }}</h4>
+							<h3 id="song1_title" class="font-bold">Song1</h3>
+							<h4 id="song1_artists">Song1 Artists</h4>
 						</div>
 					</button>
 				</div>
 				<div class="flex flex-col items-center justify-center hover:bg-slate-500 h-full w-full py-5">
-					<button onclick="select_song({{ .Song2_ID }}, {{ .Song1_ID }})"
+					<button id="song2_btn" onclick="select_song(this)" winner="" loser=""
 						class="flex flex-col md:flex-col-reverse lg:flex-col items-center justify-center text-center">
-						{{ if .Song2_Image }}
-						<img src="{{ .Song2_Image }}"
-							class="max-w-[250px] md:min-w-[300px] max-h-[250px] md:min-h-[300px]" />
-						{{ else }}
-						<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet"
+						<img id="song2_img" src=""
+							class="invisible max-w-[250px] md:min-w-[300px] max-h-[250px] md:min-h-[300px]" />
+						<svg id="song2_svg" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet"
 							class="max-w-[250px] md:min-w-[300px] max-h-[250px] md:min-h-[300px]">
 							<path
 								d="M6 3h15v15.167a3.5 3.5 0 1 1-3.5-3.5H19V5H8v13.167a3.5 3.5 0 1 1-3.5-3.5H6V3zm0 13.667H4.5a1.5 1.5 0 1 0 1.5 1.5v-1.5zm13 0h-1.5a1.5 1.5 0 1 0 1.5 1.5v-1.5z">
 							</path>
 						</svg>
-						{{ end }}
 						<div>
-							<h3 class="font-bold">{{ .Song2 }}</h3>
-							<h4>{{ .Song2_Artists }}</h4>
+							<h3 id="song2_title" class="font-bold">Song2</h3>
+							<h4 id="song2_artists">Song2 Artists</h4>
 						</div>
 					</button>
 				</div>

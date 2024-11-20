@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -68,7 +69,7 @@ func withErrorMiddleware(nextHandler ErrorHandlerFunc) http.HandlerFunc {
 		if err != nil {
 			logger.Error("request handler returned error", "err", err, "status", status)
 			w.WriteHeader(status)
-			errorPage(w, err, status)
+			errorPage(w, errors.New("Something went wrong"), status)
 		}
 	}
 }

@@ -2,14 +2,34 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/bafto/FindFavouriteSong/db"
 	"github.com/gorilla/sessions"
 )
+
+func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
+	if err := selectSongsHtml.Execute(w, nil); err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("Error executing selectSongsHtml template: %w", err)
+	}
+	return http.StatusOK, nil
+}
+
+type SelectSongResponse struct {
+	Round         int    `json:"round"`
+	Matches       int    `json:"matches"`
+	Song1_Title   string `json:"song1_title"`
+	Song1_Artists string `json:"song1_artists"`
+	Song1_Image   string `json:"song1_image"`
+	Song1_ID      string `json:"song1_id"`
+	Song2_Title   string `json:"song2_title"`
+	Song2_Artists string `json:"song2_artists"`
+	Song2_Image   string `json:"song2_image"`
+	Song2_ID      string `json:"song2_id"`
+}
 
 func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
 	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
@@ -29,40 +49,22 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 	}
 
 	winnerID, loserID := r.FormValue("winner"), r.FormValue("loser")
-	logger = logger.With("winner-id", winnerID, "loser-id", loserID)
-	if winnerID == "" || loserID == "" {
-		return http.StatusBadRequest, fmt.Errorf("winner or loser missing")
-	}
+	// if we have both ids, we selected a song
+	// if one is missing we only retrieve the next pair
+	if winnerID != "" && loserID != "" {
+		logger = logger.With("winner-id", winnerID, "loser-id", loserID)
+		logger.Debug("user selected song")
 
-	if err := queries.AddMatch(r.Context(), db.AddMatchParams{
-		Session:     sessionID,
-		RoundNumber: currentRound,
-		Winner:      winnerID,
-		Loser:       loserID,
-	}); err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("could not create match in db: %w", err)
-	}
+		if err := queries.AddMatch(r.Context(), db.AddMatchParams{
+			Session:     sessionID,
+			RoundNumber: currentRound,
+			Winner:      winnerID,
+			Loser:       loserID,
+		}); err != nil {
+			return http.StatusInternalServerError, fmt.Errorf("could not create match in db: %w", err)
+		}
 
-	if err := tx.Commit(); err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err)
-	}
-	logger.Debug("inserted match into db")
-	return http.StatusOK, nil
-}
-
-func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
-	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-	defer tx.Rollback()
-
-	sessionID := user.CurrentSession.Int64
-	logger = logger.With("session-id", sessionID)
-
-	currentRound, err := queries.GetCurrentRound(r.Context(), sessionID)
-	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("could not determine current round number from DB: %w", err)
+		logger.Debug("inserted match into db")
 	}
 
 	nextPair, err := queries.GetNextPair(r.Context(), db.GetNextPairParams{
@@ -72,6 +74,7 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("error getting next pair from DB: %w", err)
 	}
+
 	// default case is 2 where we don't have to do anything
 	if len(nextPair) != 2 {
 		currentRound++
@@ -136,17 +139,19 @@ func selectSongPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.S
 		return status, err
 	}
 
-	selectSongsHtml.Execute(w, map[string]string{
-		"Round":         strconv.FormatInt(currentRound, 10),
-		"Matches":       strconv.FormatInt(matchesCount, 10),
-		"Song1":         nextPair[0].Title.String,
-		"Song1_Artists": nextPair[0].Artists.String,
-		"Song1_Image":   nextPair[0].Image.String,
-		"Song1_ID":      nextPair[0].ID,
-		"Song2":         nextPair[1].Title.String,
-		"Song2_Artists": nextPair[1].Artists.String,
-		"Song2_Image":   nextPair[1].Image.String,
-		"Song2_ID":      nextPair[1].ID,
-	})
+	if err := json.NewEncoder(w).Encode(SelectSongResponse{
+		Round:         int(currentRound),
+		Matches:       int(matchesCount),
+		Song1_Title:   nextPair[0].Title.String,
+		Song1_Artists: nextPair[0].Artists.String,
+		Song1_Image:   nextPair[0].Image.String,
+		Song1_ID:      nextPair[0].ID,
+		Song2_Title:   nextPair[1].Title.String,
+		Song2_Artists: nextPair[1].Artists.String,
+		Song2_Image:   nextPair[1].Image.String,
+		Song2_ID:      nextPair[1].ID,
+	}); err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("Error marshalling SelectSongResponse: %w", err)
+	}
 	return http.StatusOK, nil
 }
