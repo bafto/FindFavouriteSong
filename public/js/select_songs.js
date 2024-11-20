@@ -24,11 +24,11 @@ function update_page(resp) {
 	song1_btn_element.setAttribute('loser', resp.song2_id);
 	if (resp.song1_image) {
 		song1_img_element.setAttribute('src', resp.song1_image);
-		song1_img_element.classList.remove('invisible');
-		song1_svg_element.classList.add('invisible');
+		song1_img_element.removeAttribute('hidden');
+		song1_svg_element.setAttribute('hidden', '');
 	} else {
-		song1_img_element.classList.add('invisible');
-		song1_svg_element.classList.remove('invisible');
+		song1_img_element.setAttribute('hidden', '');
+		song1_svg_element.removeAttribute('hidden');
 	}
 	song1_title_element.innerText = resp.song1_title;
 	song1_artists_element.innerText = resp.song1_artists;
@@ -37,11 +37,11 @@ function update_page(resp) {
 	song2_btn_element.setAttribute('loser', resp.song1_id);
 	if (resp.song2_image) {
 		song2_img_element.setAttribute('src', resp.song2_image);
-		song2_img_element.classList.remove('invisible');
-		song2_svg_element.classList.add('invisible');
+		song2_img_element.removeAttribute('hidden');
+		song2_svg_element.setAttribute('hidden', '');
 	} else {
-		song2_img_element.classList.add('invisible');
-		song2_svg_element.classList.remove('invisible');
+		song2_img_element.setAttribute('hidden', '');
+		song2_svg_element.removeAttribute('hidden');
 	}
 	song2_title_element.innerText = resp.song2_title;
 	song2_artists_element.innerText = resp.song2_artists;
