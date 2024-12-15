@@ -23,6 +23,7 @@ func healthcheckHandler(w http.ResponseWriter, r *http.Request) {
 	if !healthcheckResult.Healthy {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
+	w.Header().Add("Content-Type", "application/json")
 }
 
 type DBHealthcheckResult struct {
