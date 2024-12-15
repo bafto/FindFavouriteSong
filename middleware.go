@@ -141,3 +141,11 @@ func withMiddleware(nextHandler SessionHandlerFunc) http.HandlerFunc {
 		),
 	)
 }
+
+func withHealthMiddleware(nextHandler http.HandlerFunc) http.HandlerFunc {
+	return withPanicMiddleware(
+		withLoggingMiddleware(
+			nextHandler,
+		),
+	)
+}

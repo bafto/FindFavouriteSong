@@ -148,6 +148,7 @@ func main() {
 	mux.HandleFunc("POST /api/select_song", withMiddleware(selectSongHandler))
 	mux.HandleFunc("/winner", withMiddleware(winnerHandler))
 	mux.HandleFunc("/stats", withMiddleware(statsPageHandler))
+	mux.HandleFunc("GET /api/health", withHealthMiddleware(healthcheckHandler))
 
 	server := &http.Server{Addr: ":" + config.Port, Handler: mux}
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/bafto/FindFavouriteSong/db"
 	"github.com/gorilla/sessions"
@@ -32,6 +33,8 @@ type SelectSongResponse struct {
 }
 
 func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
+	start := time.Now()
+
 	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
 	if err != nil {
 		return http.StatusInternalServerError, err
@@ -64,7 +67,7 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 			return http.StatusInternalServerError, fmt.Errorf("could not create match in db: %w", err)
 		}
 
-		logger.Debug("inserted match into db")
+		logger.Debug("inserted match into db", "since-start", time.Since(start))
 	}
 
 	nextPair, err := queries.GetNextPair(r.Context(), db.GetNextPairParams{
@@ -153,5 +156,6 @@ func selectSongHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessi
 	}); err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Error marshalling SelectSongResponse: %w", err)
 	}
+	logger.Debug("select_song done", "since-start", time.Since(start))
 	return http.StatusOK, nil
 }
