@@ -13,9 +13,8 @@ func healthcheckHandler(w http.ResponseWriter, r *http.Request) {
 	healthcheckResult := performHealthcheck(logger)
 	logger.Debug("healthcheck done")
 
-	encoder := json.NewEncoder(w)
-	encoder.SetIndent("", "\t")
-	if err := encoder.Encode(healthcheckResult); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(healthcheckResult); err != nil {
 		logger.Warn("Error marshalling healthcheck result", "err", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -23,7 +22,6 @@ func healthcheckHandler(w http.ResponseWriter, r *http.Request) {
 	if !healthcheckResult.Healthy {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
-	w.Header().Add("Content-Type", "application/json")
 }
 
 type DBHealthcheckResult struct {
