@@ -18,35 +18,41 @@ func healthcheckHandler(w http.ResponseWriter, r *http.Request) {
 	if err := encoder.Encode(healthcheckResult); err != nil {
 		logger.Warn("Error marshalling healthcheck result", "err", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if healthcheckResult.Healthy {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 }
 
 type DBHealthcheckResult struct {
-	Status string  `json:"status"`
-	Error  *string `json:"error,omitempty"`
+	Healthy bool    `json:"healthy"`
+	Error   *string `json:"error,omitempty"`
 }
 
 type HealthcheckResult struct {
-	Status   string              `json:"status"`
+	Healthy  bool                `json:"healthy"`
 	DBStatus DBHealthcheckResult `json:"db-status"`
 }
 
 func performHealthcheck(logger *slog.Logger) (result HealthcheckResult) {
-	result.Status = "UP"
+	result.Healthy = true
 
 	if err := db_conn.Ping(); err != nil {
 		logger.Error("healthcheck found the DB to be disconnected", "err", err.Error())
 		errstr := err.Error()
 
-		result.Status = "DOWN"
+		result.Healthy = false
 		result.DBStatus = DBHealthcheckResult{
-			Status: "DOWN",
-			Error:  &errstr,
+			Healthy: false,
+			Error:   &errstr,
 		}
 	} else {
 		result.DBStatus = DBHealthcheckResult{
-			Status: "UP",
-			Error:  nil,
+			Healthy: true,
+			Error:   nil,
 		}
 	}
 
