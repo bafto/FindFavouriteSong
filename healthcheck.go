@@ -20,9 +20,7 @@ func healthcheckHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if healthcheckResult.Healthy {
-		w.WriteHeader(http.StatusOK)
-	} else {
+	if !healthcheckResult.Healthy {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 }
