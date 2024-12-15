@@ -38,7 +38,7 @@ func performHealthcheck(logger *slog.Logger) (result HealthcheckResult) {
 	result.Healthy = true
 
 	if err := db_conn.Ping(); err != nil {
-		logger.Error("healthcheck found the database to be disconnected", "err", err.Error())
+		logger.Error("healthcheck found the DB to be disconnected", "err", err.Error())
 		errstr := err.Error()
 
 		result.Healthy = false
