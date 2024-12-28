@@ -98,6 +98,7 @@ var (
 )
 
 func main() {
+	panic("I fail!")
 	var err error
 	config, err = read_config()
 	if err != nil {
