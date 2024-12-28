@@ -90,6 +90,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getSessionStmt, err = db.PrepareContext(ctx, getSession); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSession: %w", err)
 	}
+	if q.getStatistics1Stmt, err = db.PrepareContext(ctx, getStatistics1); err != nil {
+		return nil, fmt.Errorf("error preparing query GetStatistics1: %w", err)
+	}
 	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
 	}
@@ -223,6 +226,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getSessionStmt: %w", cerr)
 		}
 	}
+	if q.getStatistics1Stmt != nil {
+		if cerr := q.getStatistics1Stmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getStatistics1Stmt: %w", cerr)
+		}
+	}
 	if q.getUserStmt != nil {
 		if cerr := q.getUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserStmt: %w", cerr)
@@ -314,6 +322,7 @@ type Queries struct {
 	getPlaylistItemStmt                       *sql.Stmt
 	getPlaylistsForUserStmt                   *sql.Stmt
 	getSessionStmt                            *sql.Stmt
+	getStatistics1Stmt                        *sql.Stmt
 	getUserStmt                               *sql.Stmt
 	getWinnerStmt                             *sql.Stmt
 	initializePossibleNextItemsForSessionStmt *sql.Stmt
@@ -348,6 +357,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getPlaylistItemStmt:                       q.getPlaylistItemStmt,
 		getPlaylistsForUserStmt:                   q.getPlaylistsForUserStmt,
 		getSessionStmt:                            q.getSessionStmt,
+		getStatistics1Stmt:                        q.getStatistics1Stmt,
 		getUserStmt:                               q.getUserStmt,
 		getWinnerStmt:                             q.getWinnerStmt,
 		initializePossibleNextItemsForSessionStmt: q.initializePossibleNextItemsForSessionStmt,
