@@ -7,49 +7,54 @@ import (
 	"strconv"
 
 	"github.com/bafto/FindFavouriteSong/db"
-	"github.com/gorilla/sessions"
+	"github.com/gin-gonic/gin"
 )
 
-func selectSessionHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
-	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
+func selectSessionHandler(c *gin.Context) {
+	logger, user, tx, queries, err := getLoggerUserTransactionQueries(c)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
 	}
 	defer tx.Rollback()
 
 	if user.CurrentSession.Valid {
-		return http.StatusBadRequest, fmt.Errorf("user already has session")
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("user already has session"))
+		return
 	}
 
 	// parse playlist url
-	sessionIdQuery := r.URL.Query().Get("session_id")
+	sessionIdQuery := c.Query("session_id")
 	logger.Debug("User selected session", "session-id", sessionIdQuery)
 	sessionId, err := strconv.Atoi(sessionIdQuery)
 	if err != nil {
-		return http.StatusBadRequest, fmt.Errorf("session id must be a valid number")
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("session id must be a valid number"))
+		return
 	}
 
-	session, err := queries.GetSession(r.Context(), int64(sessionId))
+	session, err := queries.GetSession(c, int64(sessionId))
 	if err != nil {
-		return http.StatusBadRequest, fmt.Errorf("session does not exist")
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("session does not exist"))
+		return
 	}
 
 	if session.User != user.ID {
-		return http.StatusBadRequest, fmt.Errorf("session does not belong to user")
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("session does not belong to user"))
+		return
 	}
 
-	if err := queries.SetUserSession(r.Context(), db.SetUserSessionParams{
+	if err := queries.SetUserSession(c, db.SetUserSessionParams{
 		CurrentSession: sql.NullInt64{Int64: int64(sessionId), Valid: true},
 		ID:             user.ID,
 	}); err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("failed to set user session: %w", err)
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to set user session: %w", err))
+		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err)
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err))
+		return
 	}
 
 	user.CurrentSession = sql.NullInt64{Int64: int64(sessionId), Valid: true}
-
-	return http.StatusOK, nil
 }

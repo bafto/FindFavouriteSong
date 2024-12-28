@@ -12,6 +12,7 @@ FROM alpine as run
 RUN apk add --no-cache tzdata
 
 ENV TZ=Europe/Berlin
+ENV GIN_MODE=release
 
 COPY --from=build /app/FindFavouriteSong /app/FindFavouriteSong
 COPY select_songs.gohtml select_playlist.gohtml stats.gohtml winner.gohtml error.gohtml /app/

@@ -8,19 +8,21 @@ import (
 	"slices"
 
 	"github.com/bafto/FindFavouriteSong/db"
-	"github.com/gorilla/sessions"
+	"github.com/gin-gonic/gin"
 )
 
-func statsPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
-	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
+func statsPageHandler(c *gin.Context) {
+	logger, user, tx, queries, err := getLoggerUserTransactionQueries(c)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
 	}
 	defer tx.Rollback()
 
-	winners, err := getWinnerMap(r.Context(), queries, user.ID)
+	winners, err := getWinnerMap(c, queries, user.ID)
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("failed to get winners from db: %w", err)
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get winners from db: %w", err))
+		return
 	}
 	logger.Debug("retrieved winners from DB", "n-winners", len(winners))
 
@@ -28,8 +30,7 @@ func statsPageHandler(w http.ResponseWriter, r *http.Request, s *sessions.Sessio
 		return int(b.N - a.N)
 	})
 
-	statsHtml.Execute(w, winners)
-	return http.StatusOK, nil
+	c.HTML(http.StatusOK, "stats.gohtml", winners)
 }
 
 type Winner struct {

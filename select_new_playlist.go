@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,88 +10,94 @@ import (
 	"time"
 
 	"github.com/bafto/FindFavouriteSong/db"
-	"github.com/gorilla/sessions"
+	"github.com/gin-gonic/gin"
 )
 
-func selectNewPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
-	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
+func selectNewPlaylistHandler(c *gin.Context) {
+	logger, user, tx, queries, err := getLoggerUserTransactionQueries(c)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
 	}
 	defer tx.Rollback()
 
 	if !user.CurrentSession.Valid {
 		logger.Warn("select_new_playlist called without active session")
-		return http.StatusBadRequest, fmt.Errorf("no active session exists")
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("no active session exists"))
+		return
 	}
 
-	if delete := r.URL.Query().Get("delete"); delete != "" {
+	if delete := c.Query("delete"); delete != "" {
 		logger = logger.With("delete-query-param", delete)
 
 		deleteId, err := strconv.Atoi(delete)
 		if err != nil {
-			return http.StatusBadRequest, fmt.Errorf("session must be a valid int: %w", err)
+			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("session must be a valid int: %w", err))
+			return
 		}
 
-		deleteSession, err := queries.GetSession(r.Context(), int64(deleteId))
+		deleteSession, err := queries.GetSession(c, int64(deleteId))
 		if err != nil {
-			return http.StatusBadRequest, fmt.Errorf("delete must be a valid session id: %w", err)
+			c.AbortWithError(http.StatusBadRequest, fmt.Errorf("delete must be a valid session id: %w", err))
+			return
 		}
 
 		logger.Debug("deleting incomplete session", "session-to-be-deleted", deleteSession.ID)
 
-		if err := queries.DeletePossibleNextItemsForSession(r.Context(), deleteSession.ID); err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("failed to delete possible next items: %w", err)
+		if err := queries.DeletePossibleNextItemsForSession(c, deleteSession.ID); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to delete possible next items: %w", err))
+			return
 		}
-		if err := queries.DeleteMatchesForSession(r.Context(), deleteSession.ID); err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("failed to delete matches: %w", err)
+		if err := queries.DeleteMatchesForSession(c, deleteSession.ID); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to delete matches: %w", err))
+			return
 		}
-		if err := queries.DeleteSession(r.Context(), deleteSession.ID); err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("failed to delete session: %w", err)
+		if err := queries.DeleteSession(c, deleteSession.ID); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to delete session: %w", err))
+			return
 		}
 
 		logger.Debug("deleted incomplete session", "deleted-session", deleteSession.ID)
 	}
 
-	sessions, err := queries.GetNonActiveUserSessions(r.Context(), db.GetNonActiveUserSessionsParams{
+	sessions, err := queries.GetNonActiveUserSessions(c, db.GetNonActiveUserSessionsParams{
 		User:          user.ID,
 		Activesession: user.CurrentSessionNotNull(),
 	})
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("error retrieving sessions for user: %w", err)
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error retrieving sessions for user: %w", err))
+		return
 	}
 
 	if len(sessions) < 3 {
-		if err := queries.SetUserSession(r.Context(), db.SetUserSessionParams{
+		if err := queries.SetUserSession(c, db.SetUserSessionParams{
 			CurrentSession: sql.NullInt64{Valid: false},
 			ID:             user.ID,
 		}); err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("failed to set user session: %w", err)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to set user session: %w", err))
+			return
 		}
 
 		if err := tx.Commit(); err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err))
+			return
 		}
 
 		user.CurrentSession.Valid = false
 		logger.Debug("set user session to null")
 
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-		return http.StatusTemporaryRedirect, nil
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+		return
 	}
 
-	incompleteSessions := mapIncompleteSessions(r.Context(), logger, queries, sessions)
+	incompleteSessions := mapIncompleteSessions(c, logger, queries, sessions)
 
 	if err := tx.Commit(); err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err)
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to commit DB transaction: %w", err))
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]any{"sessions": incompleteSessions}); err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("Error json encoding incompleteSessions: %w", err)
-	}
-
-	return http.StatusOK, nil
+	c.JSON(http.StatusOK, gin.H{"sessions": incompleteSessions})
 }
 
 type IncompleteSession struct {

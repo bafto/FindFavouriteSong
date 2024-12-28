@@ -1,27 +1,24 @@
 package main
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-func healthcheckHandler(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
+func healthcheckHandler(c *gin.Context) {
+	logger := getLogger(c)
 
 	logger.Debug("starting healthcheck")
 	healthcheckResult := performHealthcheck(logger)
 	logger.Debug("healthcheck done")
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(healthcheckResult); err != nil {
-		logger.Warn("Error marshalling healthcheck result", "err", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	status := http.StatusOK
 	if !healthcheckResult.Healthy {
-		w.WriteHeader(http.StatusServiceUnavailable)
+		status = http.StatusServiceUnavailable
 	}
+	c.JSON(status, healthcheckResult)
 }
 
 type DBHealthcheckResult struct {

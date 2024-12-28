@@ -6,39 +6,25 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/bafto/FindFavouriteSong/db"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/securecookie"
-	"github.com/gorilla/sessions"
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
 
-func configure_slog() {
-	var level slog.Level
-	if err := level.UnmarshalText(
-		[]byte(config.Log_level),
-	); err != nil {
-		panic(err)
-	}
-
-	levelVar := &slog.LevelVar{}
-	levelVar.Set(level)
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: levelVar,
-	}))
-
-	slog.SetDefault(logger)
-}
-
 const (
+	session_name   = "ffs-session"
 	session_cookie = "ffs-session-cookie"
 	session_id_key = "ffs-user-id"
 	state_length   = 16
@@ -87,9 +73,9 @@ var (
 	db_conn *sql.DB
 	queries *db.Queries
 
-	authKey        = securecookie.GenerateRandomKey(64)
-	encryptionKey  = securecookie.GenerateRandomKey(32)
-	sessionManager = sessions.NewCookieStore(authKey, encryptionKey)
+	authKey       = securecookie.GenerateRandomKey(64)
+	encryptionKey = securecookie.GenerateRandomKey(32)
+	cookieStore   = cookie.NewStore(authKey, encryptionKey)
 
 	spotifyClient *spotify.Client
 	spotifyAuth   *spotifyauth.Authenticator
@@ -103,9 +89,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	configure_slog()
+	configure_logging()
 
-	sessionManager.Options.SameSite = http.SameSiteLaxMode
+	cookieStore.Options(sessions.Options{SameSite: http.SameSiteLaxMode})
 
 	spotifyAuth = spotifyauth.New(
 		spotifyauth.WithRedirectURL(config.Redirect_url),
@@ -135,22 +121,36 @@ func main() {
 
 	go checkpoint_ticker(ctx, db_conn)
 
-	mux := http.NewServeMux()
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+		Formatter: gin_log_formatter,
+		Output:    io.Discard,
+	}))
+	r.Use(SlogMiddleware())
+	r.Use(gin.BasicAuth(config.Users))
+	r.Use(sessions.Sessions(session_name, cookieStore))
+	r.Use(SpotifyAuthMiddleware())
 
-	mux.Handle("/public/", http.StripPrefix("/public/", http.FileServer(http.Dir("./public/"))))
+	r.LoadHTMLGlob("*.gohtml")
 
-	mux.HandleFunc("/", withMiddleware(defaultHandler))
-	mux.HandleFunc("/spotifyauthentication", withMiddleware(authHandler))
-	mux.HandleFunc("POST /api/select_playlist", withMiddleware(selectPlaylistHandler))
-	mux.HandleFunc("POST /api/select_session", withMiddleware(selectSessionHandler))
-	mux.HandleFunc("/api/select_new_playlist", withMiddleware(selectNewPlaylistHandler))
-	mux.HandleFunc("/select_song", withMiddleware(selectSongPageHandler))
-	mux.HandleFunc("POST /api/select_song", withMiddleware(selectSongHandler))
-	mux.HandleFunc("/winner", withMiddleware(winnerHandler))
-	mux.HandleFunc("/stats", withMiddleware(statsPageHandler))
-	mux.HandleFunc("GET /api/health", withHealthMiddleware(healthcheckHandler))
+	r.Static("/public", "./public")
+	r.GET("/", defaultHandler)
+	r.GET("/spotifyauthentication", authHandler)
+	r.GET("/select_song", selectSongPageHandler)
+	r.GET("/winner", winnerHandler)
+	r.GET("/stats", statsPageHandler)
 
-	server := &http.Server{Addr: ":" + config.Port, Handler: mux}
+	api := r.Group("/api")
+	{
+		api.POST("/select_playlist", selectPlaylistHandler)
+		api.POST("/select_session", selectSessionHandler)
+		api.POST("/select_song", selectSongHandler)
+		api.GET("/select_new_playlist", selectNewPlaylistHandler)
+		api.GET("/health", healthcheckHandler)
+	}
+
+	server := &http.Server{Addr: ":" + config.Port, Handler: r.Handler()}
 
 	go func() {
 		slog.Info("starting http server")
@@ -177,23 +177,25 @@ func main() {
 	slog.Info("server shutdown gracefully")
 }
 
-func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
-	logger := getLogger(r)
+func defaultHandler(c *gin.Context) {
+	logger := getLogger(c)
 
-	user, err := getActiveUser(s)
+	user, err := getActiveUser(c)
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("error retrieving user: %w", err)
+		c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("error retrieving user: %w", err))
+		return
 	}
 
 	if !user.CurrentSession.Valid {
 		logger.Debug("user has no active session, displaying select_playlist.html")
 
-		playlists, err := queries.GetPlaylistsForUser(r.Context(), user.ID)
+		playlists, err := queries.GetPlaylistsForUser(c, user.ID)
 		if err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("Error loading playlist for user: %w", err)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("Error loading playlist for user: %w", err))
+			return
 		}
 
-		sessions, err := queries.GetNonActiveUserSessions(r.Context(), db.GetNonActiveUserSessionsParams{
+		sessions, err := queries.GetNonActiveUserSessions(c, db.GetNonActiveUserSessionsParams{
 			User:          user.ID,
 			Activesession: user.CurrentSessionNotNull(),
 		})
@@ -201,47 +203,45 @@ func defaultHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session)
 		logger.Debug("recieved non-active sessions", "sessions", sessions)
 
 		if err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("failed to get non active user sessions: %w", err)
+			c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to get non active user sessions: %w", err))
+			return
 		}
 
-		selectPlaylistHtml.Execute(w, map[string]any{
+		c.HTML(http.StatusOK, "select_playlist.gohtml", gin.H{
 			"Playlists": mapPlaylists(playlists),
-			"Sessions":  mapSessions(r.Context(), logger, sessions),
+			"Sessions":  mapSessions(c, logger, sessions),
 		})
-		return http.StatusOK, nil
+		return
 	}
 
 	logger.Debug("redirecting to /select_song")
-	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
-	return http.StatusTemporaryRedirect, nil
+	c.Redirect(http.StatusTemporaryRedirect, "/select_song")
 }
 
-func winnerHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
-	winnerID := r.FormValue("winner")
+func winnerHandler(c *gin.Context) {
+	winnerID := c.Query("winner")
 	if winnerID == "" {
-		return http.StatusBadRequest, fmt.Errorf("no winner provided in form")
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("no winner provided in form"))
+		return
 	}
 
-	winnerItem, err := queries.GetPlaylistItem(r.Context(), winnerID)
+	winnerItem, err := queries.GetPlaylistItem(c, winnerID)
 	if err != nil {
-		return http.StatusBadRequest, fmt.Errorf("winner not found in DB: %w", err)
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("winner not found in DB: %w", err))
+		return
 	}
 
-	winnerHtml.Execute(w, map[string]string{
+	c.HTML(http.StatusOK, "winner.gohtml", gin.H{
 		"Image":   winnerItem.Image.String,
 		"Title":   winnerItem.Title.String,
 		"Artists": winnerItem.Artists.String,
 	})
-	return http.StatusOK, nil
 }
 
-func getIp(r *http.Request) string {
-	return strings.Split(r.RemoteAddr, ":")[0]
-}
-
-func getActiveUser(session *sessions.Session) (*ActiveUser, error) {
-	userID, ok := session.Values[session_id_key]
-	if !ok {
+func getActiveUser(c *gin.Context) (*ActiveUser, error) {
+	session := sessions.Default(c)
+	userID := session.Get(session_id_key)
+	if userID == nil {
 		return nil, fmt.Errorf("User ID not found in session")
 	}
 	user, ok := activeUserMap.Load(userID.(string))
@@ -251,15 +251,15 @@ func getActiveUser(session *sessions.Session) (*ActiveUser, error) {
 	return user, nil
 }
 
-func getLoggerUserTransactionQueries(w http.ResponseWriter, r *http.Request, s *sessions.Session) (*slog.Logger, *ActiveUser, *sql.Tx, *db.Queries, error) {
-	logger := getLogger(r)
+func getLoggerUserTransactionQueries(c *gin.Context) (*slog.Logger, *ActiveUser, *sql.Tx, *db.Queries, error) {
+	logger := getLogger(c)
 
-	user, err := getActiveUser(s)
+	user, err := getActiveUser(c)
 	if err != nil {
 		return logger, nil, nil, nil, fmt.Errorf("failed to get activeUser, user not found: %w", err)
 	}
 
-	tx, err := db_conn.BeginTx(r.Context(), nil)
+	tx, err := db_conn.BeginTx(c, nil)
 	if err != nil {
 		return logger, user, nil, nil, fmt.Errorf("failed to create DB transaction: %w", err)
 	}

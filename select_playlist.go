@@ -11,44 +11,48 @@ import (
 	"strings"
 
 	"github.com/bafto/FindFavouriteSong/db"
-	"github.com/gorilla/sessions"
+	"github.com/gin-gonic/gin"
 	"github.com/zmb3/spotify/v2"
 )
 
-func selectPlaylistHandler(w http.ResponseWriter, r *http.Request, s *sessions.Session) (int, error) {
-	logger, user, tx, queries, err := getLoggerUserTransactionQueries(w, r, s)
+func selectPlaylistHandler(c *gin.Context) {
+	logger, user, tx, queries, err := getLoggerUserTransactionQueries(c)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
 	}
 	defer tx.Rollback()
 
 	if user.CurrentSession.Valid {
-		return http.StatusBadRequest, fmt.Errorf("active session already exists")
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("active session already exists"))
+		return
 	}
 
 	// parse playlist url
-	playlistUrl := r.FormValue("playlist_url")
+	playlistUrl := c.PostForm("playlist_url")
 	logger.Debug("User selected playlist", "playlist-url", playlistUrl)
 
 	playlistId, err := getPlaylistIdFromURL(playlistUrl)
 	if err != nil {
-		return http.StatusNotFound, fmt.Errorf("could not parse spotify id from playlist url: %w", err)
+		c.AbortWithError(http.StatusNotFound, fmt.Errorf("could not parse spotify id from playlist url: %w", err))
+		return
 	}
 	logger.Debug("parsed playlist id", "playlist-id", playlistId)
 
 	logger.Debug("adding playlist to DB")
-	if status, err := addPlaylistToDB(r.Context(), logger, user, queries, playlistId, playlistUrl); err != nil {
-		return status, err
+	if status, err := addPlaylistToDB(c, logger, user, queries, playlistId, playlistUrl); err != nil {
+		c.AbortWithError(status, err)
+		return
 	}
 
 	logger.Debug("preparing new session")
-	if status, err := prepareNewSession(r.Context(), logger, user, queries, tx, playlistId); err != nil {
-		return status, err
+	if status, err := prepareNewSession(c, logger, user, queries, tx, playlistId); err != nil {
+		c.AbortWithError(status, err)
+		return
 	}
 
 	logger.Debug("redirecting to /select_song")
-	http.Redirect(w, r, "/select_song", http.StatusTemporaryRedirect)
-	return http.StatusTemporaryRedirect, nil
+	c.Redirect(http.StatusTemporaryRedirect, "/select_song")
 }
 
 // helper function for selectPlaylistHandler
