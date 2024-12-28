@@ -148,6 +148,7 @@ func main() {
 		api.POST("/select_song", selectSongHandler)
 		api.GET("/select_new_playlist", selectNewPlaylistHandler)
 		api.GET("/health", healthcheckHandler)
+		api.HEAD("/health", healthcheckHandler)
 	}
 
 	server := &http.Server{Addr: ":" + config.Port, Handler: r.Handler()}
