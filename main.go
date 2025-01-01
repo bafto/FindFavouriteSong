@@ -83,6 +83,23 @@ var (
 	activeUserMap = SyncMap[string, *ActiveUser]{}
 )
 
+func addMiddleware(r interface {
+	Use(middleware ...gin.HandlerFunc) gin.IRoutes
+}, auth bool,
+) {
+	r.Use(gin.Recovery())
+	r.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+		Formatter: gin_log_formatter,
+		Output:    io.Discard,
+	}))
+	r.Use(SlogMiddleware())
+	if auth {
+		r.Use(gin.BasicAuth(config.Users))
+		r.Use(sessions.Sessions(session_name, cookieStore))
+		r.Use(SpotifyAuthMiddleware())
+	}
+}
+
 func main() {
 	var err error
 	config, err = read_config()
@@ -122,33 +139,33 @@ func main() {
 	go checkpoint_ticker(ctx, db_conn)
 
 	r := gin.New()
-	r.Use(gin.Recovery())
-	r.Use(gin.LoggerWithConfig(gin.LoggerConfig{
-		Formatter: gin_log_formatter,
-		Output:    io.Discard,
-	}))
-	r.Use(SlogMiddleware())
-	r.Use(gin.BasicAuth(config.Users))
-	r.Use(sessions.Sessions(session_name, cookieStore))
-	r.Use(SpotifyAuthMiddleware())
 
 	r.LoadHTMLGlob("*.gohtml")
-
-	r.Static("/public", "./public")
-	r.GET("/", defaultHandler)
-	r.GET("/spotifyauthentication", authHandler)
-	r.GET("/select_song", selectSongPageHandler)
-	r.GET("/winner", winnerHandler)
-	r.GET("/stats", statsPageHandler)
-
+	root := r.Group("/")
 	api := r.Group("/api")
+	health := api.Group("/health")
+
+	addMiddleware(root, true)
+	addMiddleware(api, true)
+	addMiddleware(health, false) // no auth for healthcheck
+
+	{
+		root.Static("/public", "./public")
+		root.GET("/", defaultHandler)
+		root.GET("/spotifyauthentication", authHandler)
+		root.GET("/select_song", selectSongPageHandler)
+		root.GET("/winner", winnerHandler)
+		root.GET("/stats", statsPageHandler)
+	}
 	{
 		api.POST("/select_playlist", selectPlaylistHandler)
 		api.POST("/select_session", selectSessionHandler)
 		api.POST("/select_song", selectSongHandler)
 		api.GET("/select_new_playlist", selectNewPlaylistHandler)
-		api.GET("/health", healthcheckHandler)
-		api.HEAD("/health", healthcheckHandler)
+	}
+	{
+		health.GET("", healthcheckHandler)
+		health.HEAD("", healthcheckHandler)
 	}
 
 	server := &http.Server{Addr: ":" + config.Port, Handler: r.Handler()}
@@ -180,6 +197,7 @@ func main() {
 
 func defaultHandler(c *gin.Context) {
 	logger := getLogger(c)
+	logger.Debug("default handler!")
 
 	user, err := getActiveUser(c)
 	if err != nil {
