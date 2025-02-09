@@ -33,7 +33,7 @@ func read_config() (Config, error) {
 	viper.SetDefault("shutdown_timeout", time.Second*10)
 	viper.SetDefault("users", map[string]string{})
 	viper.SetDefault("checkpoint_interval", 2*time.Hour)
-	viper.SetDefault("checkpoint_interval", 1*time.Minute)
+	viper.SetDefault("checkpoint_timeout", 1*time.Minute)
 
 	viper.SetEnvPrefix("FFS")
 	viper.AutomaticEnv()

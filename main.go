@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"log/slog"
 	"net/http"
@@ -62,12 +61,6 @@ func checkpoint_ticker(ctx context.Context, db *sql.DB) {
 
 var (
 	config Config
-
-	selectSongsHtml    = template.Must(template.ParseFiles("select_songs.gohtml"))
-	selectPlaylistHtml = template.Must(template.ParseFiles("select_playlist.gohtml"))
-	winnerHtml         = template.Must(template.ParseFiles("winner.gohtml"))
-	statsHtml          = template.Must(template.ParseFiles("stats.gohtml"))
-	errorHtml          = template.Must(template.ParseFiles("error.gohtml"))
 
 	ctx     = context.Background()
 	db_conn *sql.DB
@@ -162,6 +155,7 @@ func main() {
 		api.POST("/select_session", selectSessionHandler)
 		api.POST("/select_song", selectSongHandler)
 		api.GET("/select_new_playlist", selectNewPlaylistHandler)
+		api.GET("/playlist_statistics", playlistStatisticsHandler)
 	}
 	{
 		health.GET("", healthcheckHandler)

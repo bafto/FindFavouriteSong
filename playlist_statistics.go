@@ -15,15 +15,9 @@ func playlistStatisticsHandler(c *gin.Context) {
 		return
 	}
 
-	playlistUrl := c.Query("playlist")
-	if playlistUrl == "" {
+	playlistId := c.Query("playlist")
+	if playlistId == "" {
 		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("no playlist given"))
-		return
-	}
-
-	playlistId, err := getPlaylistIdFromURL(playlistUrl)
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("could not extract playlist id from url"))
 		return
 	}
 
@@ -36,5 +30,27 @@ func playlistStatisticsHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, Statistics1ToJson(result))
+}
+
+type GetStatisticsJsonResult struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Artists string `json:"artists"`
+	Image   string `json:"image"`
+	Points  int64  `json:"points"`
+}
+
+func Statistics1ToJson(result []db.GetStatistics1Row) []GetStatisticsJsonResult {
+	ret := make([]GetStatisticsJsonResult, len(result))
+	for i, result := range result {
+		ret[i] = GetStatisticsJsonResult{
+			ID:      result.ID,
+			Title:   result.Title.String,
+			Artists: result.Artists.String,
+			Image:   result.Image.String,
+			Points:  result.Points,
+		}
+	}
+	return ret
 }
