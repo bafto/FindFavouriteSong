@@ -2,7 +2,160 @@
 <html>
 
 <head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Find Favourite Song</title>
+	<style>
+		.button {
+			background: linear-gradient(135deg, #ffffff, #f3f3f3);
+			/* Subtle gradient */
+			border: none;
+			padding: 12px 20px;
+			margin-bottom: 25px;
+			font-size: 16px;
+			font-weight: bold;
+			color: #333;
+			background: linear-gradient(135deg, #4a78ff, #6b94ff);
+			border-radius: 4px;
+			box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+			cursor: pointer;
+			transition: all 0.2s ease-in-out;
+		}
+
+		.button:hover {
+			background: linear-gradient(135deg, #6b94ff, #4a78ff);
+			transform: scale(1.05);
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+		}
+
+		.button:active {
+			transform: scale(0.98);
+			box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+		}
+
+
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #f4f4f4;
+			margin: 0;
+			padding: 20px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+
+		.playlist-container {
+			max-width: 600px;
+			width: 100%;
+		}
+
+		.playlist {
+			background: white;
+			border-radius: 10px;
+			margin-bottom: 10px;
+			padding: 15px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			cursor: pointer;
+			transition: transform 0.2s ease-in-out;
+		}
+
+		/*
+		.playlist:hover {
+			transform: scale(1.02);
+		}
+		*/
+
+		.playlist h2 {
+			margin: 0;
+			font-size: 18px;
+			color: #333;
+		}
+
+		.playlist-content {
+			display: none;
+			padding-top: 10px;
+		}
+
+		#new_statistics {
+			display: flex;
+			flex-direction: column;
+			gap: 20px;
+			padding: 20px;
+			max-width: 600px;
+			margin: auto;
+		}
+
+		.points-group {
+			margin: 15px;
+			background: #f9f9f9;
+			border-radius: 10px;
+			padding: 15px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+		}
+
+		.points-title {
+			font-size: 20px;
+			font-weight: bold;
+			color: #333;
+			margin-bottom: 10px;
+			text-align: center;
+		}
+
+		.song-list {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.song-item {
+			background: white;
+			border-radius: 8px;
+			padding: 10px;
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			transition: transform 0.2s ease-in-out;
+		}
+
+		/*
+		.song-item:hover {
+			transform: scale(1.02);
+		}
+		*/
+
+		.song-wrapper {
+			display: flex;
+			align-items: center;
+			gap: 15px;
+			width: 100%;
+		}
+
+		.song-image {
+			width: 60px;
+			height: 60px;
+			border-radius: 8px;
+			object-fit: cover;
+		}
+
+		.song-details {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.song-title {
+			font-size: 16px;
+			font-weight: bold;
+			color: #222;
+			margin: 0;
+		}
+
+		.song-artists {
+			font-size: 14px;
+			color: #666;
+			margin: 0;
+		}
+	</style>
 	<script>
 		async function fill_in_new_stats(playlist_id) {
 			const resp = await fetch(`/api/playlist_statistics?playlist=${playlist_id}`);
@@ -14,55 +167,81 @@
 			const json = await resp.json();
 			console.log(json);
 
-			const points_map = Map.groupBy(json, ({ points }) => points);
-			const new_stats = document.getElementById('new_statistics');
-			[...points_map.keys()].sort((a, b) => a-b).reverse().forEach(points => {
-				const points_div = document.createElement('div');
-				const points_h2 = document.createElement('h2');
-				points_h2.innerText = `${points}`;
+			const points_map = Map.groupBy(json, ({points}) => points);
+			const new_stats = document.getElementById(`new_statistics_${playlist_id}`);
 
+			const colors = ["#ff4d4d", "#ff944d", "#ffd24d", "#99cc66", "#66b3ff", "#8c66ff"];
+
+			function getColor(points) {
+				const index = Math.min(Math.floor(points / 10), colors.length - 1);
+				return colors[index];
+			}
+
+			[...points_map.keys()].sort((a, b) => a - b).reverse().forEach(points => {
+				const points_div = document.createElement('div');
+				points_div.classList.add('points-group');
+				points_div.style.backgroundColor = getColor(points)
+
+				const points_h2 = document.createElement('h2');
+				points_h2.innerText = `${points} Points`;
+				points_h2.classList.add('points-title');
+				points_h2.style.backgroundColor = getColor(points);
 				points_div.appendChild(points_h2);
 
+				const song_list = document.createElement('div');
+				song_list.classList.add('song-list');
+
 				for (const item of points_map.get(points)) {
-					item_div = document.createElement('div');
+					const item_div = document.createElement('div');
+					item_div.classList.add('song-item');
+
 					item_div.innerHTML = `
-						<div class="wrapper">
-							<div class="left">
-								<img src="${item.image}" />
-							</div>
-							<div class="right">
-								<h3>${item.title}</h3>
-								<h4>${item.artists}</h4>
-							</div>
-						</div>
-					`;
-					points_div.appendChild(item_div);
+				<div class="song-wrapper">
+					<img class="song-image" src="${item.image}" alt="${item.title}">
+					<div class="song-details">
+						<h3 class="song-title">${item.title}</h3>
+						<h4 class="song-artists">${item.artists}</h4>
+					</div>
+				</div>
+			`;
+
+					song_list.appendChild(item_div);
 				}
 
+				points_div.appendChild(song_list);
 				new_stats.appendChild(points_div);
 			});
+		}
+
+		const alreadyFetched = new Map();
+
+		function togglePlaylist(playlistId) {
+			const contentDiv = document.getElementById(`playlist-${playlistId}`);
+			if (contentDiv.style.display === "block") {
+				contentDiv.style.display = "none";
+			} else if (!alreadyFetched.get(playlistId)) {
+				contentDiv.style.display = "block";
+				fill_in_new_stats(playlistId);
+				alreadyFetched.set(playlistId, true);
+			} else {
+				contentDiv.style.display = "block";
+			}
 		}
 	</script>
 </head>
 
 <body>
 	<main>
-		<button onclick="window.location.href = '/';">Select New Playlist</button>
-		<h1>Winners</h1>
-		{{ range . }}
-		<div class="wrapper">
-			<div class="left">
-				<img src="{{ .Image }}" />
+		<div class="playlist-container">
+			<button class="button" onclick="window.location.href = '/';">Select New Playlist</button>
+			{{ range . }}
+			<div class="playlist" onclick="togglePlaylist('{{ .ID }}')">
+				<h2>{{ .Name }}</h2>
+				<div id="playlist-{{ .ID }}" class="playlist-content">
+					<div id="new_statistics_{{ .ID }}"></div>
+				</div>
 			</div>
-			<div class="right">
-				<h3>{{ .Title }}</h3>
-				<h4>{{ .Artists }}</h4>
-				<h4>{{ .N }}</h4>
-			</div>
-		</div>
-		{{ end }}
-		<h1>New Statistics</h1>
-		<div id="new_statistics">
+			{{ end }}
 		</div>
 	</main>
 </body>

@@ -285,6 +285,7 @@ func notNull(s string) sql.NullString {
 }
 
 type TemplatePlaylist struct {
+	ID   string
 	Name string
 	Url  string
 }
@@ -293,7 +294,7 @@ func mapPlaylists(playlists []db.Playlist) []TemplatePlaylist {
 	result := make([]TemplatePlaylist, 0, len(playlists))
 	for _, playlist := range playlists {
 		if playlist.Name.Valid && playlist.Url.Valid {
-			result = append(result, TemplatePlaylist{Name: playlist.Name.String, Url: playlist.Url.String})
+			result = append(result, TemplatePlaylist{ID: playlist.ID, Name: playlist.Name.String, Url: playlist.Url.String})
 		}
 	}
 	return result
