@@ -20,9 +20,11 @@ func getLogger(c *gin.Context, args ...any) *slog.Logger {
 
 func SlogMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		username, _, _ := c.Request.BasicAuth()
 		logger := slog.Default().With(
 			"ip", c.ClientIP(),
 			"request-id", uuid.New(),
+			"basic-auth-user", username,
 		)
 
 		logger.Debug("Got a request", "url", c.Request.URL)
